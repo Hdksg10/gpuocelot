@@ -252,6 +252,11 @@ LABEL ({IDENTIFIER}{WHITESPACE}":")
                                     return OPCODE_XOR; }
 
 
+"lop3"                          { sstrcpy( yylval->text, yytext, 1024 ); \
+                                    return OPCODE_LOP3; }
+"shf"                           { sstrcpy( yylval->text, yytext, 1024 ); \
+                                    return OPCODE_SHF; }
+
 ".align"                        { yylval->value = TOKEN_ALIGN; \
                                     return TOKEN_ALIGN; }
 ".address_size"                 { yylval->value = TOKEN_ADDRESS_SIZE; \
@@ -333,6 +338,8 @@ LABEL ({IDENTIFIER}{WHITESPACE}":")
                                     return TOKEN_SM30; }
 "sm_35"                         { yylval->value = TOKEN_SM35; 
                                     return TOKEN_SM35; }
+"sm_52"                         { yylval->value = TOKEN_SM52;
+                                    return TOKEN_SM52;}
 "map_f64_to_f32"                { yylval->value = TOKEN_MAP_F64_TO_F32; 
                                     return TOKEN_MAP_F64_TO_F32; }
 "texmode_independent"           { yylval->value = TOKEN_TEXMODE_INDEPENDENT; 

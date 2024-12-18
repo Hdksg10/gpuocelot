@@ -1265,6 +1265,7 @@ void PTXToLLVMTranslator::_translate( const ir::PTXInstruction& i,
 	case ir::PTXInstruction::Trap:     _translateTrap( i );        break;
 	case ir::PTXInstruction::Vote:     _translateVote( i );        break;
 	case ir::PTXInstruction::Xor:      _translateXor( i );         break;
+	case ir::PTXInstruction::Lop3:     _translateLop3( i, block );        break;
 	default:
 	{
 		assertM( false, "Opcode " 
@@ -6766,6 +6767,205 @@ void PTXToLLVMTranslator::_translateXor( const ir::PTXInstruction& i )
 	Xor.b = _translate( i.b );
 
 	_add( Xor );
+}
+
+void PTXToLLVMTranslator::_translateLop3( const ir::PTXInstruction& i, const analysis::DataflowGraph::Block& block )
+{
+	std::string loop = "Ocelot_loop_lop3_" + block.label();
+	std::string cond = "Ocelot_cond_lop3_" + block.label();
+	std::string end = "Ocelot_end_lop3_" + block.label();
+	ir::LLVMAlloca allocaResult;
+	allocaResult.d.name = _tempRegister();
+	allocaResult.d.type.category = ir::LLVMInstruction::Type::Pointer;
+	allocaResult.d.type.type = ir::LLVMInstruction::I32;
+	_add(allocaResult);
+	ir::LLVMAlloca allocaIndex;
+	allocaIndex.d.name = _tempRegister();
+	allocaIndex.d.type.category = ir::LLVMInstruction::Type::Pointer;
+	allocaIndex.d.type.type = ir::LLVMInstruction::I32;
+	_add(allocaIndex);
+
+	ir::LLVMStore storeResultInit;
+	storeResultInit.a = ir::LLVMInstruction::Operand(static_cast<ir::LLVMI32>(0));
+	storeResultInit.d = allocaResult.d;
+	_add( storeResultInit );
+	ir::LLVMStore storeIndexInit;
+	storeIndexInit.a = ir::LLVMInstruction::Operand(static_cast<ir::LLVMI32>(0));
+	storeIndexInit.d = allocaIndex.d;
+	_add( storeIndexInit );
+	
+	ir::LLVMBr brCond;
+	brCond.iftrue = "%" + cond;
+	_add(brCond);
+
+	// Loop conditon 
+	_newBlock(cond);
+	ir::LLVMLoad loadIndex;
+	loadIndex.a = storeIndexInit.d;
+	loadIndex.d.type.type = ir::LLVMInstruction::I32;
+	loadIndex.d.type.category = ir::LLVMInstruction::Type::Element;
+	loadIndex.d.name = _tempRegister();
+	_add(loadIndex);
+
+	ir::LLVMIcmp compare;
+	compare.comparison = ir::LLVMInstruction::Slt;
+	compare.d.type.category = ir::LLVMInstruction::Type::Element;
+	compare.d.type.type = ir::LLVMInstruction::I1;
+	compare.d.name = _tempRegister();
+	compare.a = loadIndex.d;
+	compare.b = ir::LLVMInstruction::Operand(static_cast<ir::LLVMI32>(32));
+	_add(compare);
+	
+	ir::LLVMBr brLoop;
+	brLoop.condition = compare.d;
+	brLoop.iftrue = "%" +  loop;
+	brLoop.iffalse = "%" + end;
+	_add(brLoop);
+
+	// Loop body
+	_newBlock(loop);
+	// Extract current result
+	ir::LLVMLoad loadCuurent;
+	loadCuurent.a = storeResultInit.d;
+	loadCuurent.d.type.type = ir::LLVMInstruction::I32;
+	loadCuurent.d.type.category = ir::LLVMInstruction::Type::Element;
+	loadCuurent.d.name = _tempRegister();
+	_add(loadCuurent);
+
+
+	// Extract the current bits
+	ir::LLVMInstruction::Operand one (static_cast<ir::LLVMI32>(1));
+	ir::LLVMInstruction::Operand two (static_cast<ir::LLVMI32>(2));
+	ir::LLVMLshr lshrA, lshrB, lshrC;
+	ir::LLVMAnd andA, andB, andC;
+	lshrA.a = _translate(i.a);
+	lshrB.a = _translate(i.b);
+	lshrC.a = _translate(i.c);
+	lshrA.b = loadIndex.d;
+	lshrB.b = loadIndex.d;
+	lshrC.b = loadIndex.d;
+	lshrA.d.type.type = ir::LLVMInstruction::I32;
+	lshrA.d.type.category = ir::LLVMInstruction::Type::Element;
+	lshrA.d.name = _tempRegister();
+	lshrB.d.type.type = ir::LLVMInstruction::I32;
+	lshrB.d.type.category = ir::LLVMInstruction::Type::Element;
+	lshrB.d.name = _tempRegister();
+	lshrC.d.type.type = ir::LLVMInstruction::I32;
+	lshrC.d.type.category = ir::LLVMInstruction::Type::Element;
+	lshrC.d.name = _tempRegister();
+	andA.a = lshrA.d;
+	andB.a = lshrB.d;
+	andC.a = lshrC.d;
+	andA.b = one;
+	andB.b = one;
+	andC.b = one;
+	andA.d.type.type = ir::LLVMInstruction::I32;
+	andA.d.type.category = ir::LLVMInstruction::Type::Element;
+	andA.d.name = _tempRegister();
+	andB.d.type.type = ir::LLVMInstruction::I32;
+	andB.d.type.category = ir::LLVMInstruction::Type::Element;
+	andB.d.name = _tempRegister();
+	andC.d.type.type = ir::LLVMInstruction::I32;
+	andC.d.type.category = ir::LLVMInstruction::Type::Element;
+	andC.d.name = _tempRegister();
+	_add(lshrA);
+	_add(lshrB);
+	_add(lshrC);
+	_add(andA);
+	_add(andB);
+	_add(andC);
+
+	// Get immLut Index
+	ir::LLVMShl shlA, shlB;
+	ir::LLVMOr orB, orC;
+	shlA.a = andA.d;
+	shlA.b = two;
+	shlB.a = andB.d;
+	shlB.b = one;
+	shlA.d.type.type = ir::LLVMInstruction::I32;
+	shlA.d.type.category = ir::LLVMInstruction::Type::Element;
+	shlA.d.name = _tempRegister();
+	shlB.d.type.type = ir::LLVMInstruction::I32;
+	shlB.d.type.category = ir::LLVMInstruction::Type::Element;
+	shlB.d.name = _tempRegister();
+	orB.a = shlA.d;
+	orB.b = shlB.d;
+
+	orB.d.type.type = ir::LLVMInstruction::I32;
+	orB.d.type.category = ir::LLVMInstruction::Type::Element;
+	orB.d.name = _tempRegister();
+
+	orC.a = orB.d;
+	orC.b = andC.d;
+	orC.d.type.type = ir::LLVMInstruction::I32;
+	orC.d.type.category = ir::LLVMInstruction::Type::Element;
+	orC.d.name = _tempRegister();
+
+	_add(shlA);
+	_add(shlB);
+	_add(orB);
+	_add(orC);
+
+	ir::LLVMTrunc trunc;
+	trunc.a = orC.d;
+	trunc.d = ir::LLVMInstruction::Operand(_tempRegister(), ir::LLVMInstruction::Type(ir::LLVMInstruction::I8, ir::LLVMInstruction::Type::Element));
+	_add(trunc);
+
+	// Get immLut result
+	ir::LLVMLshr lshrImmLut;
+	lshrImmLut.a = ir::LLVMInstruction::Operand(i.immLut);
+	lshrImmLut.a.type.type = ir::LLVMInstruction::I8;
+	lshrImmLut.b = trunc.d;
+	lshrImmLut.d = ir::LLVMInstruction::Operand(_tempRegister(), trunc.d.type);
+
+	ir::LLVMAnd andImmLut;
+	andImmLut.a = lshrImmLut.d;
+	andImmLut.b = ir::LLVMInstruction::Operand(static_cast<ir::LLVMI8>(1));
+	andImmLut.b.type.type = ir::LLVMInstruction::I8;
+	andImmLut.d = ir::LLVMInstruction::Operand(_tempRegister(), trunc.d.type);
+	
+	ir::LLVMZext zext;
+	zext.a = andImmLut.a;
+	zext.d = ir::LLVMInstruction::Operand(_tempRegister(), one.type);
+	_add(lshrImmLut);
+	_add(andImmLut);
+	_add(zext);
+
+	// Build result
+	ir::LLVMShl shl;
+	shl.a = zext.d;
+	shl.b = loadIndex.d;
+	shl.d = ir::LLVMInstruction::Operand(_tempRegister(), one.type);
+	ir::LLVMOr orResult;
+	orResult.b = shl.d;
+	orResult.a = loadCuurent.d;
+	orResult.d = ir::LLVMInstruction::Operand(_tempRegister(), one.type);
+	ir::LLVMStore storeResult;
+	storeResult.a = orResult.d;
+	storeResult.d = storeResultInit.d;
+
+	// Update loop
+	ir::LLVMAdd addIdx;
+	addIdx.a = loadIndex.d;
+	addIdx.b = one;
+	addIdx.d = ir::LLVMInstruction::Operand(_tempRegister(), one.type);
+
+	ir::LLVMStore storeIdx;
+	storeIdx.a = addIdx.d;
+	storeIdx.d = storeIndexInit.d;
+
+	_add(shl);
+	_add(orResult);
+	_add(storeResult);
+	_add(addIdx);
+	_add(storeIdx);
+
+	_add(brCond);
+	_newBlock(end);
+	ir::LLVMLoad loadResult;
+	loadResult.a = storeResultInit.d;
+	loadResult.d = _destination(i);
+	_add(loadResult);
 }
 
 void PTXToLLVMTranslator::_bitcast( const ir::PTXInstruction& i )
