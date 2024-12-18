@@ -6,6 +6,7 @@ option(BUILD_LLVM "Use LLVM compiled from sources: default OFF" OFF)
 option(BUILD_TESTS "Build tests: default OFF" OFF)
 option(BUILD_TESTS_CUDA "Build CUDA tests: default ON" ON)
 option(BUILD_TOOLS "Build tool executables: default ON" ON)
+option(BUILD_TESTS_NEW_PTX "Build PTX test: default OFF" OFF)
 
 if ("x${CMAKE_BUILD_TYPE}" STREQUAL "x")
 set(CMAKE_BUILD_TYPE "Release")
@@ -542,7 +543,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 	${PROJECT_NAME}_util
 	"-Wl,--no-whole-archive")
 target_link_libraries(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES})
-target_link_libraries(${PROJECT_NAME} PRIVATE -Wl,--gc-sections -Wl,--start-group ${LLVM_LIBRARIES} -Wl,--end-group)
+target_link_libraries(${PROJECT_NAME} PUBLIC -Wl,--gc-sections -Wl,--start-group ${LLVM_LIBRARIES} -Wl,--end-group)
 target_link_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_LIBRARY_DIRS})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ZLIB_LIBRARIES} tinfo)
 install(TARGETS ${PROJECT_NAME} LIBRARY DESTINATION /usr/lib)
@@ -605,6 +606,10 @@ if(BUILD_TESTS)
 		res_embed(TARGET ${PROJECT_NAME}_cuda_TestIndirectFunctionCallOcelot NAME "IndirectCallDriver_ptx"
 			PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/cuda/test/TestIndirectFunctionCallDriver.ptx KEYWORD)
 	endif()
+endif()
+
+if(BUILD_TESTS_NEW_PTX)
+	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../tests/ptx5.0 ${CMAKE_CURRENT_SOURCE_DIR}/../tests/ptx5.0/build)
 endif()
 
 #++ -o .release_build/ocelot/TestCudaGenericMemory

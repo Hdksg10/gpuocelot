@@ -606,6 +606,7 @@ namespace parser
 		else if( token == TOKEN_SM21 ) statement.targets.push_back( "sm_21" );
 		else if( token == TOKEN_SM30 ) statement.targets.push_back( "sm_30" );
 		else if( token == TOKEN_SM35 ) statement.targets.push_back( "sm_35" );
+		else if (token == TOKEN_SM52 )  statement.targets.push_back( "sm_52" );
 		else if( token == TOKEN_MAP_F64_TO_F32 )
 		{
 			statement.targets.push_back( "map_f64_to_f32" );
@@ -1792,6 +1793,11 @@ namespace parser
 		statement.instruction.floatingPointMode
 			= tokenToFloatingPointMode( token );
 	}
+
+	void PTXParser::State::immLut( int token )
+	{
+		statement.instruction.immLut = static_cast<uint8_t>( token );
+	}
 	
 	void PTXParser::State::defaultPermute()
 	{
@@ -2564,7 +2570,9 @@ namespace parser
 		if( string == "txq" ) return ir::PTXInstruction::Txq;
 		if( string == "vote" ) return ir::PTXInstruction::Vote;
 		if( string == "xor" ) return ir::PTXInstruction::Xor;
-	
+		/* PTX 5.0 ISA*/
+		if( string == "lop3" ) return ir::PTXInstruction::Lop3;
+		if( string == "shf" ) return ir::PTXInstruction::Shf;
 		return ir::PTXInstruction::Nop;
 	}
 

@@ -111,7 +111,10 @@ namespace ir {
 			Reconverge,
 			Phi,
 			Nop,
-			Invalid_Opcode
+			Invalid_Opcode,
+			// PTX 5.0 ISA
+			Lop3,
+			Shf
 		};
 
 		/*!
@@ -329,6 +332,9 @@ namespace ir {
 			ShuffleMode_Invalid
 		};
 		
+		/* PTX 5.0 ISA*/
+		typedef uint8_t Imm8; // 0-255, indiciating logical operation
+
 	public:
 		static std::string toString( Level );
 		static std::string toString( CacheLevel cache );
@@ -354,6 +360,7 @@ namespace ir {
 		static std::string toString( ColorComponent );
 		static std::string toString( ShuffleMode );
 		static std::string toString( Opcode );
+		static std::string toString( Imm8 );
 		static bool isPt( const PTXOperand& );
 
 	public:
@@ -448,6 +455,8 @@ namespace ir {
 			/*! For tld4 instructions, the color component */
 			ColorComponent colorComponent;
 			
+			/*! For lop3 instructions, the logical operation*/
+			Imm8 immLut;
 		};
 		
 		/*! For call instructions, indicates a tail call */

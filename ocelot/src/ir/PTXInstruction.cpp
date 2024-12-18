@@ -8,6 +8,7 @@
 #include <ocelot/ir/PTXInstruction.h>
 #include <hydrazine/debug.h>
 #include <sstream>
+#include "ocelot/ir/PTXOperand.h"
 
 std::string ir::PTXInstruction::toString( Level l ) {
 	switch( l ) {
@@ -420,9 +421,18 @@ std::string ir::PTXInstruction::toString( Opcode opcode ) {
 		case Reconverge: return "reconverge"; break;
 		case Phi:        return "phi";        break;
 		case Nop:        return "nop";        break;
+		case Lop3:       return "lop3";       break;
+		case Shf:        return "shf";        break;
 		case Invalid_Opcode: break;
 	}
 	return "INVALID";
+}
+
+std::string ir::PTXInstruction::toString( Imm8 immLut ) {
+	char buffer[10];
+	std::snprintf(buffer, sizeof(buffer), "0x%02x", immLut);
+	std::string result(buffer);
+	return result;
 }
 
 bool ir::PTXInstruction::isPt( const PTXOperand& op )
@@ -2023,6 +2033,29 @@ std::string ir::PTXInstruction::valid() const {
 			}
 			break;
 		}
+		case Lop3: {
+			if( type != PTXOperand::b32 ) {
+				return "invalid instruction type " 
+					+ PTXOperand::toString( type );
+			}
+			if( !PTXOperand::valid( type, a.type )  ) {
+				return "operand A type " + PTXOperand::toString( a.type ) 
+					+ " cannot be assigned to " + PTXOperand::toString( type );
+			}
+			if( !PTXOperand::valid( type, d.type )  ) {
+				return "operand D type " + PTXOperand::toString( d.type ) 
+					+ " cannot be assigned to " + PTXOperand::toString( type );
+			}
+			if( !PTXOperand::valid( type, b.type )  ) {
+				return "operand B type " + PTXOperand::toString( b.type ) 
+					+ " cannot be assigned to " + PTXOperand::toString( type );
+			}
+			if( !PTXOperand::valid( type, c.type )  ) {
+				return "operand C type " + PTXOperand::toString( c.type ) 
+					+ " cannot be assigned to " + PTXOperand::toString( type );
+			}
+			break;
+		}
 		default: return "check not implemented for " + toString(opcode); break;
 	}
 	return "";
@@ -2601,6 +2634,12 @@ std::string ir::PTXInstruction::toString() const {
 		}
 		case Reconverge: {
 			return "reconverge";
+		}
+		/* PTX 5.0 ISA */
+		case Lop3: {
+			return guard() + "lop3." + PTXOperand::toString( type ) + " "
+			    + d.toString() + ", " + a.toString() + ", " + b.toString()
+				+ ", " + c.toString() + ", " + toString(immLut);
 		}
 		default: break;
 	}

@@ -263,7 +263,8 @@ namespace parser
 					void floatingPointMode( int token );
 					void defaultPermute();
 					void full();
-					
+					void immLut( int token );
+
 					void instruction();
 					void instruction( const std::string& opcode, int dataType );
 					void instruction( const std::string& opcode );

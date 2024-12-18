@@ -174,6 +174,9 @@ protected:
 	void _translateTrap( const ir::PTXInstruction& i );
 	void _translateVote( const ir::PTXInstruction& i );
 	void _translateXor( const ir::PTXInstruction& i );
+	/* PTX 5.0 ISA*/
+	void _translateLop3( const ir::PTXInstruction& i, 
+		const analysis::DataflowGraph::Block& block );
 
 protected:
 	void _bitcast( const ir::PTXInstruction& i );
