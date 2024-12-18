@@ -26,3 +26,10 @@
 *.exe
 *.out
 *.app
+
+ocelot/build/
+
+# llvm ir
+tests/ptx/**/*.ll
+.vscode
+ocelot/kernel-times.json
