@@ -19,7 +19,11 @@
 #include <ocelot/executive/EmulatedKernel.h>
 #include <ocelot/executive/RuntimeException.h>
 #include <ocelot/executive/CooperativeThreadArray.h>
-
+#include <ocelot/transforms/PassManager.h>
+#include <ocelot/transforms/RemoveBarrierPass.h>
+#include <ocelot/transforms/ConvertPredicationToSelectPass.h>
+#include <ocelot/translator/PTXToLLVMTranslator.h>
+#include <ocelot/ir/LLVMKernel.h>
 #include <boost/random.hpp>
 #include <ocelot/ir/Dim3.h>
 #include <ocelot/ir/PTXOperand.h>

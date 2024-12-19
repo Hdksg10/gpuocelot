@@ -441,7 +441,6 @@ std::string ir::PTXInstruction::toString( Opcode opcode ) {
 		case Phi:        return "phi";        break;
 		case Nop:        return "nop";        break;
 		case Lop3:       return "lop3";       break;
-		case Shf:        return "shf";        break;
 		case Invalid_Opcode: break;
 	}
 	return "INVALID";

@@ -1,4 +1,6 @@
 #include <ptx_test/TestInstruction.h>
+#include <sys/types.h>
+#include <cstdint>
 #include <vector>
 
 
@@ -16,11 +18,6 @@
 
 
 namespace test {
-	// TestInstruction::ArrayWithSize::ArrayWithSize() {
-	// 	array.p_f32 = nullptr;
-	// 	bytesize = 0;
-	// 	type = ir::PTXOperand::DataType::TypeSpecifier_invalid;
-	// }
 
 	TestInstruction::ArrayWithSize::ArrayWithSize(float* p, size_t bsz, ir::Dim3 _dim3) {
 		array.p_f32 = p;
@@ -350,8 +347,7 @@ namespace test {
 		return p;
 	}
 
-	// template<typename T, typename... Args>
-	// bool TestInstruction::_runPTXKernel(ArrayWithSize<T> d, Args... args){
+	
 	bool TestInstruction::_runPTXKernel(std::vector<ArrayWithSize> args){
 		// Get CUDA Device
 		CUresult r;
@@ -382,7 +378,7 @@ namespace test {
 		void* d_host = nullptr;
 		CUdeviceptr d_device = 0;
 		size_t d_size;
-		std::vector<void*> unpackedParams;
+		std::vector<CUdeviceptr> unpackedParams;
 		for (size_t i = 0; i < args.size(); i++) {
 			auto arg = args[i];
 			if (arg.returnAray) {
@@ -390,25 +386,27 @@ namespace test {
 				d_size = arg.bytesize;
 				d_host = ArrayWithSize::getPointer(arg);
 				CUDA_CHECK(cuMemAlloc(&d_device, d_size), "cannot load allocate memory with error code: ");
-				unpackedParams.push_back((void*) d_device);
+				unpackedParams.push_back(d_device);
 			}
 			else {
-				unpackedParams.push_back((void*) _handle_arg(ArrayWithSize::getPointer(arg), arg.bytesize));
+				unpackedParams.push_back(_handle_arg(ArrayWithSize::getPointer(arg), arg.bytesize));
 			}
 		}
-		// std::apply([&](const auto&... values) {
-        // ((std::is_same_v<decltype(values), CUdeviceptr> ? unpackedParams.push_back((void*)values) : void()), ...);
-    	// }, handleResults);
-
-
-		
-		// unpackedParams.insert(unpackedParams.begin() + config.destinationIdx, (void *)d_device);
 		std::vector<void*> kernelParams;
-		for (auto param : unpackedParams) {
+		for (auto&& param : unpackedParams) {
 			kernelParams.push_back(&param);
 		}
 		
 		void** kernelParams_ptr = kernelParams.data();
+		// void* kernelParams_ptr[] = {
+		// 	&unpackedParams[0],
+		// 	&unpackedParams[1],
+		// 	&unpackedParams[2],
+		// 	&unpackedParams[3],
+		// };
+		// for (int i = 0 ; i < 4; i++) {
+		// 	std::cout << "upp: " << kernelParams_ptr[i] << ", kpp:" << kernelParams[i] << std::endl;
+		// }
 		// Launch kernel
 		CUDA_CHECK(cuLaunchKernel(
 					kernel,
@@ -421,6 +419,8 @@ namespace test {
 		CUDA_CHECK(cuCtxSynchronize(), "cannot synchronize cuda device with error code: ");
 		// Copy result back
 		CUDA_CHECK(cuMemcpyDtoH(d_host, d_device, d_size), "cannot copy memory from device to host back with error code:  ");
+
+		// std::cout << *((uint32_t *)d_host) << std::endl;
 
 		// Clean memory
 		CUDA_CHECK(cuMemFree(d_device), "cannot free device dest memory with error code:  ");
@@ -457,6 +457,42 @@ namespace test {
 			return (result = false);
 		}
 
+		// output translated llvm kernel
+		if (output) {
+			
+			transforms::PassManager manager(&module);
+
+			transforms::ConvertPredicationToSelectPass pass1;
+			transforms::RemoveBarrierPass pass2;
+			translator::PTXToLLVMTranslator translator;
+
+			manager.addPass(&pass1);
+			manager.addPass(&pass2);
+
+			manager.runOnKernel(*kernel);
+			manager.releasePasses();
+			
+			manager.addPass(&translator);
+			manager.runOnKernel(*kernel);
+			manager.releasePasses();
+
+			ir::LLVMKernel* translatedKernel = dynamic_cast< ir::LLVMKernel* >( 
+				translator.translatedKernel() );
+			translatedKernel->assemble();
+			
+			std::string outputFile = input + "." + kernel->name + ".ll";
+		
+			if( output )
+			{
+				std::ofstream outFile( outputFile.c_str() );
+				outFile << translatedKernel->code();
+				outFile << "\n";
+				outFile.close();
+			}
+			
+			delete translatedKernel;
+		}
+
 		// std::cout << kernel->name << std::endl;
 		// configure parameters
 		std::vector<ir::Parameter*> params;
@@ -472,7 +508,6 @@ namespace test {
 			params.push_back(executableKerel->getParameter(paramName));
 			
 		}
-
 		// set parameter values
 		for (int i = 0; i < params.size(); i++) {
 			auto p = params[i];
@@ -504,10 +539,6 @@ namespace test {
 				args.push_back(_allocArray(type, dim3, true));
 		}
 		
-		// for (int i = 0; i < d.dim3.size(); i++)
-		// {
-		// 	std::cout << a_p[i] <<  " " << std::endl;
-		// }
 		result = _runPTXKernel(args) && result;
 		// copy dest array
 		auto d_cuda = _allocArray(d);
@@ -536,13 +567,29 @@ namespace test {
 				std::cout << d_p[i] <<  " " ;
 			}
 			std::cout << std::endl;
+
+			std::cout << "Argument: " << std::endl;
+			int argIdx = 0;
+			for (int i = 0; i < args.size(); i++)
+			{
+				if (args[i].returnAray) continue;
+				std::cout << "arg" << argIdx << ": ";
+				argIdx++;
+				uint32_t* p = (uint32_t *) ArrayWithSize::getPointer(args[i]);
+				for (int j = 0; j < args[i].dim3.size(); j++)
+				{
+					std::cout << p[j] <<  " " ;
+				}
+				std::cout << std::endl;
+			}
 		}
 		
 
 		for (auto&& arg:args){
 			_freeArray(arg);
 		}
-		return result;
+
+		return result && equal;
 	}
 
 }

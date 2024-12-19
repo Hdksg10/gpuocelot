@@ -43,4 +43,4 @@ function(ptx_add_tests name)
 endfunction()
 
 ptx_add_tests(lop3)
-
+ptx_add_tests(shf)

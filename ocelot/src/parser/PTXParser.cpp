@@ -2583,7 +2583,6 @@ namespace parser
 		if( string == "xor" ) return ir::PTXInstruction::Xor;
 		/* PTX 5.0 ISA*/
 		if( string == "lop3" ) return ir::PTXInstruction::Lop3;
-		if( string == "shf" ) return ir::PTXInstruction::Shf;
 		return ir::PTXInstruction::Nop;
 	}
 

@@ -115,7 +115,6 @@ namespace ir {
 			Invalid_Opcode,
 			// PTX 5.0 ISA
 			Lop3,
-			Shf
 		};
 
 		/*!

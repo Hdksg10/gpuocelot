@@ -5,8 +5,8 @@
 	\brief A test for the PTXToLLVMTranslator class.
 */
 
-#ifndef TEST_PTX_TO_LLVM_TRANSLATOR_CPP_INCLUDED
-#define TEST_PTX_TO_LLVM_TRANSLATOR_CPP_INCLUDED
+#ifndef TESTPTXTOLLVMTRANSLATOR_H
+#define TESTPTXTOLLVMTRANSLATOR_H
 
 #include "boost/filesystem.hpp"
 #include <queue>
@@ -225,5 +225,5 @@ int main( int argc, char** argv )
 	return test.passed();
 }
 
-#endif
+#endif /* TESTPTXTOLLVMTRANSLATOR_H */
 

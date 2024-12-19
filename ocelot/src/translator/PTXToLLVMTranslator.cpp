@@ -5,8 +5,8 @@
 	\comment : Written with subdued haste
 */
 
-#ifndef PTX_TO_LLVM_TRANSLATOR_CPP_INCLUDED
-#define PTX_TO_LLVM_TRANSLATOR_CPP_INCLUDED
+#ifndef PTXTOLLVMTRANSLATOR_H
+#define PTXTOLLVMTRANSLATOR_H
 
 // Ocelot Includes
 #include <ocelot/translator/PTXToLLVMTranslator.h>
@@ -25,6 +25,7 @@
 // Standard Library Includes
 #include <climits>
 #include <limits>
+#include "ocelot/ir/LLVMStatement.h"
 
 // Preprocessor Macros
 #ifdef __i386__
@@ -5325,10 +5326,13 @@ void PTXToLLVMTranslator::_translateShf(const ir::PTXInstruction& i)
 
     ir::LLVMInstruction::Operand n = c;
 
+	// Comparision result will be used to select data as the result
+	ir::LLVMIcmp cmp;
     if (wrapMode) {
         ir::LLVMAnd andInst;
         andInst.d.name = _tempRegister();
         andInst.d.type.type = ir::LLVMInstruction::I32;
+		andInst.d.type.category = ir::LLVMInstruction::Type::Element;
         andInst.a = c;
         andInst.b.type.type = ir::LLVMInstruction::I32;
         andInst.b.type.category = ir::LLVMInstruction::Type::Element;
@@ -5338,7 +5342,6 @@ void PTXToLLVMTranslator::_translateShf(const ir::PTXInstruction& i)
         n = andInst.d;
     }
     else if (clampMode) {
-        ir::LLVMIcmp cmp;
         cmp.d.name = _tempRegister();
         cmp.d.type.type = ir::LLVMInstruction::I1;
         cmp.d.type.category = ir::LLVMInstruction::Type::Element;
@@ -5353,6 +5356,7 @@ void PTXToLLVMTranslator::_translateShf(const ir::PTXInstruction& i)
         ir::LLVMSelect sel;
         sel.d.name = _tempRegister();
         sel.d.type.type = ir::LLVMInstruction::I32;
+		sel.d.type.category = ir::LLVMInstruction::Type::Element;
         sel.condition = cmp.d;
         sel.a = c;
         sel.b.type.type = ir::LLVMInstruction::I32;
@@ -5371,7 +5375,8 @@ void PTXToLLVMTranslator::_translateShf(const ir::PTXInstruction& i)
 
     ir::LLVMSub subInst;
     subInst.d.name = _tempRegister();
-    subInst.d.type = ir::LLVMInstruction::I32;
+    subInst.d.type.type = ir::LLVMInstruction::I32;
+	subInst.d.type.category = ir::LLVMInstruction::Type::Element;
     subInst.a = thirtyTwo;
     subInst.b = n;
     _add(subInst);
@@ -5387,7 +5392,7 @@ void PTXToLLVMTranslator::_translateShf(const ir::PTXInstruction& i)
         shl.a = b;
         shl.b = leftShift ? n : invN;
         _add(shl);
-        shiftA = shl.d;
+        shiftB = shl.d;
     }
 
     // Left or right shift on `a`
@@ -5398,14 +5403,35 @@ void PTXToLLVMTranslator::_translateShf(const ir::PTXInstruction& i)
         lshr.a = a;
         lshr.b = leftShift ? invN : n;
         _add(lshr);
-        shiftB = lshr.d;
+        shiftA = lshr.d;
     }
 
     ir::LLVMOr orInst;
-    orInst.d = _destination(i);
-    orInst.a = shiftA;
+	orInst.a = shiftA;
     orInst.b = shiftB;
-    _add(orInst);
+
+	// if clampMode and n==32, "shf.l d a b n" is equal to "mov d a"
+	// "shf.r d a b n" is equal to "mov d b"
+	if (clampMode) {
+		orInst.d.name = _tempRegister();
+		orInst.d.type = shiftA.type;
+		_add(orInst);
+		ir::LLVMSelect sel;
+		sel.condition = cmp.d;
+		sel.d = _destination(i);
+		sel.a = orInst.d;
+		if (leftShift) {
+			sel.b = a;
+		}
+		else {
+			sel.b = b;
+		}
+		_add(sel);
+	}
+	else {
+    	orInst.d = _destination(i);
+		_add(orInst);
+	}
 }
 
 void PTXToLLVMTranslator::_translateShl( const ir::PTXInstruction& i )
@@ -9779,5 +9805,5 @@ void PTXToLLVMTranslator::_addKernelSuffix()
 	
 }
 
-#endif
+#endif /* PTXTOLLVMTRANSLATOR_H */
 
