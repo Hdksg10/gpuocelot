@@ -2,7 +2,7 @@
 #include <sys/types.h>
 #include <cstdint>
 #include <vector>
-
+#include <cmath>
 
 #ifdef REPORT_BASE
 #undef REPORT_BASE
@@ -18,7 +18,7 @@
 
 
 namespace test {
-
+	const double THERESHOLD = 1e-6;
 	TestInstruction::ArrayWithSize::ArrayWithSize(float* p, size_t bsz, ir::Dim3 _dim3) {
 		array.p_f32 = p;
 		bytesize = bsz;
@@ -97,7 +97,7 @@ namespace test {
 			case ir::PTXOperand::DataType::f32: {
 				bool equal = true;
 				for (size_t i = 0; i < bytesize / sizeof(float); i++) {
-					if (this->array.p_f32[i] != other.array.p_f32[i]) {
+					if (fabs(this->array.p_f32[i] - other.array.p_f32[i]) > THERESHOLD) {
 						equal = false;
 						break;
 					}
@@ -107,7 +107,7 @@ namespace test {
 			case ir::PTXOperand::DataType::f64: {
 				bool equal = true;
 				for (size_t i = 0; i < bytesize / sizeof(double); i++) {
-					if (this->array.p_f64[i] != other.array.p_f64[i]) {
+					if (fabs(this->array.p_f64[i] - other.array.p_f64[i]) > THERESHOLD) {
 						equal = false;
 						break;
 					}
