@@ -95,10 +95,24 @@ namespace test {
 
 		switch (type) {
 			case ir::PTXOperand::DataType::f32: {
-				return std::memcmp(this->array.p_f32, other.array.p_f32, bytesize) == 0;
+				bool equal = true;
+				for (size_t i = 0; i < bytesize / sizeof(float); i++) {
+					if (this->array.p_f32[i] != other.array.p_f32[i]) {
+						equal = false;
+						break;
+					}
+				}
+				return equal;
 			}
 			case ir::PTXOperand::DataType::f64: {
-				return std::memcmp(this->array.p_f64, other.array.p_f64, bytesize) == 0;
+				bool equal = true;
+				for (size_t i = 0; i < bytesize / sizeof(double); i++) {
+					if (this->array.p_f64[i] != other.array.p_f64[i]) {
+						equal = false;
+						break;
+					}
+				}
+				return equal;
 			}
 			case ir::PTXOperand::DataType::s32: {
 				return std::memcmp(this->array.p_i32, other.array.p_i32, bytesize) == 0;
