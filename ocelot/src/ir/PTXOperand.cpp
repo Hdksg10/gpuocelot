@@ -49,6 +49,7 @@ std::string ir::PTXOperand::toString( DataType type ) {
 		case b32:  return "b32";  break;
 		case b64:  return "b64";  break;
 		case f16:  return "f16";  break;
+		case f16x2:return "f16x2";break;
 		case f32:  return "f32";  break;
 		case f64:  return "f64";  break;
 		case pred: return "pred"; break;
@@ -150,6 +151,7 @@ bool ir::PTXOperand::isFloat( DataType type ) {
 	switch( type ) {
 		case f16: /* fall through */
 		case f32: /* fall through */
+		case f16x2: /* fall through */
 		case f64: result = true;
 		default: break;
 	}
@@ -198,6 +200,7 @@ unsigned int ir::PTXOperand::bytes( DataType type ) {
 		case u32:  /* fall through */
 		case b32:  /* fall through */
 		case f32:  /* fall through */
+		case f16x2:/* fall through */
 		case s32:  return 4; break;
 		case f64:  /* fall through */
 		case u64:  /* fall through */
@@ -225,6 +228,7 @@ bool ir::PTXOperand::valid( DataType destination, DataType source ) {
 				case s32: /* fall through */
 				case u32: /* fall through */
 				case f32: /* fall through */
+				case f16x2: /* fall through */
 				case b32: return true; break;
 				default: break;
 			}
@@ -332,6 +336,7 @@ bool ir::PTXOperand::valid( DataType destination, DataType source ) {
 		case f32: {
 			switch( source ) {
 				case b32: /* fall through */
+				case f16x2: /* fall through */
 				case f32: return true; break;
 				default: break;
 			}
@@ -377,6 +382,7 @@ bool ir::PTXOperand::relaxedValid( DataType instructionType,
 				case s32: /* fall through */
 				case u32: /* fall through */
 				case f32: /* fall through */
+				case f16x2: /* fall through */
 				case b32: return true; break;
 				default: break;
 			}
@@ -391,6 +397,7 @@ bool ir::PTXOperand::relaxedValid( DataType instructionType,
 				case s32: /* fall through */
 				case u32: /* fall through */
 				case f32: /* fall through */
+				case f16x2: /* fall through */
 				case b32: /* fall through */
 				case s16: /* fall through */
 				case u16: /* fall through */
@@ -409,6 +416,7 @@ bool ir::PTXOperand::relaxedValid( DataType instructionType,
 				case s32: /* fall through */
 				case u32: /* fall through */
 				case f32: /* fall through */
+				case f16x2: /* fall through */
 				case b32: /* fall through */
 				case s16: /* fall through */
 				case u16: /* fall through */
@@ -540,6 +548,7 @@ bool ir::PTXOperand::relaxedValid( DataType instructionType,
 		case f32: {
 			switch( operand ) {
 				case b32: /* fall through */
+				case f16x2: /* fall through */
 				case f32: return true; break;
 				default: break;
 			}
@@ -708,6 +717,7 @@ std::string ir::PTXOperand::toString() const {
 			case b32: /* fall through */
 			case b64: stream << imm_int; break;
 			case f16: /* fall through */
+			case f16x2: /* fall through */
 			case f32: {
 				write(stream, imm_single);
 			} break;

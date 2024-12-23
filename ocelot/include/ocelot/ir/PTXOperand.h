@@ -26,6 +26,7 @@ namespace ir {
 	typedef int64_t PTXS64;
 	
 	typedef float PTXF32;
+	typedef float PTXF16X2;
 	typedef double PTXF64;
 	
 	typedef PTXU8   PTXB8;
@@ -61,6 +62,7 @@ namespace ir {
 			u32,
 			u64,
 			f16,
+			f16x2,
 			f32,
 			f64,
 			b8,

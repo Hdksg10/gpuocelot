@@ -2469,6 +2469,7 @@ namespace parser
 			case TOKEN_F16:  return ir::PTXOperand::f16; break;
 			case TOKEN_F32:  return ir::PTXOperand::f32; break;
 			case TOKEN_F64:  return ir::PTXOperand::f64; break;
+			case TOKEN_F16X2: return ir::PTXOperand::f16x2; break;
 			default:
 			{
 				assertM(false, "Parsed invalid data type");

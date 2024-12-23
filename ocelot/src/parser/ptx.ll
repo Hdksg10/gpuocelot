@@ -208,8 +208,6 @@ LABEL ({IDENTIFIER}{WHITESPACE}":")
                                     return OPCODE_SET; }
 "setp"                          { sstrcpy( yylval->text, yytext, 1024 ); \
                                     return OPCODE_SETP; }
-"shf"                          { sstrcpy( yylval->text, yytext, 1024 ); \
-                                    return OPCODE_SHF; }
 "shfl"                          { sstrcpy( yylval->text, yytext, 1024 ); \
                                     return OPCODE_SHFL; }
 "shl"                           { sstrcpy( yylval->text, yytext, 1024 ); \
@@ -365,6 +363,7 @@ LABEL ({IDENTIFIER}{WHITESPACE}":")
 ".b32"			            	{ yylval->value = TOKEN_B32; return TOKEN_B32; }
 ".b64"			            	{ yylval->value = TOKEN_B64; return TOKEN_B64; }
 ".f16"			            	{ yylval->value = TOKEN_F16; return TOKEN_F16; }
+".f16x2"			            { yylval->value = TOKEN_F16X2; return TOKEN_F16; }
 ".f64"			            	{ yylval->value = TOKEN_F64; return TOKEN_F64; }
 ".f32"			            	{ yylval->value = TOKEN_F32; return TOKEN_F32; }
 ".pred"		                    { yylval->value = TOKEN_PRED; \
