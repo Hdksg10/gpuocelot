@@ -441,6 +441,8 @@ std::string ir::PTXInstruction::toString( Opcode opcode ) {
 		case Phi:        return "phi";        break;
 		case Nop:        return "nop";        break;
 		case Lop3:       return "lop3";       break;
+		case Dp4a:       return "dp4a";       break;
+		case Dp2a:		 return "dp2a";       break;
 		case Invalid_Opcode: break;
 	}
 	return "INVALID";
@@ -2100,6 +2102,80 @@ std::string ir::PTXInstruction::valid() const {
 			}
 			break;
 		}
+		case Dp4a: {
+			if( type != PTXOperand::s32 && type != PTXOperand::u32 ) {
+				return "invalid instruction type(atype) " 
+					+ PTXOperand::toString( type );
+			}
+
+			if( btype != PTXOperand::s32 && type != PTXOperand::u32 ) {
+				return "invalid instruction type(btype) " 
+					+ PTXOperand::toString( type );
+			}
+
+			if( !PTXOperand::valid( type, a.type )  ) {
+				return "operand A type " + PTXOperand::toString( a.type ) 
+					+ " cannot be assigned to " + PTXOperand::toString( type );
+			}
+			if( !PTXOperand::valid( type, d.type )  ) {
+				return "operand D type " + PTXOperand::toString( d.type ) 
+					+ " cannot be assigned to " + PTXOperand::toString( type );
+			}
+			if( !PTXOperand::valid( type, b.type )  ) {
+				return "operand B type " + PTXOperand::toString( b.type ) 
+					+ " cannot be assigned to " + PTXOperand::toString( type );
+			}
+			if( !PTXOperand::valid( type, c.type )  ) {
+				return "operand C type " + PTXOperand::toString( c.type ) 
+					+ " cannot be assigned to " + PTXOperand::toString( type );
+			}
+
+			// if (type == PTXOperand::u32 && btype == PTXOperand::u32 && c.type != PTXOperand::u32) {
+			// 	return "operand C type " + PTXOperand::toString( c.type ) 
+			// 		+ " should be u32 because .atype is u32 and .btype is u32";
+			// }
+
+			// if ((type == PTXOperand::s32 || btype == PTXOperand::s32) && c.type != PTXOperand::s32) {
+			// 	return "operand C type " + PTXOperand::toString( c.type ) 
+			// 		+ " should be s32 because .atype or .btype is s32";
+			// }
+
+			break;
+		}
+
+		case Dp2a: {
+			if ( !(modifier & hi) && !(modifier & lo)) {
+				return "require modifier hi or lo";
+			}
+
+			if( type != PTXOperand::s32 && type != PTXOperand::u32 ) {
+				return "invalid instruction type(atype) " 
+					+ PTXOperand::toString( type );
+			}
+
+			if( btype != PTXOperand::s32 && type != PTXOperand::u32 ) {
+				return "invalid instruction type(btype) " 
+					+ PTXOperand::toString( type );
+			}
+
+			if( !PTXOperand::valid( type, a.type )  ) {
+				return "operand A type " + PTXOperand::toString( a.type ) 
+					+ " cannot be assigned to " + PTXOperand::toString( type );
+			}
+			if( !PTXOperand::valid( type, d.type )  ) {
+				return "operand D type " + PTXOperand::toString( d.type ) 
+					+ " cannot be assigned to " + PTXOperand::toString( type );
+			}
+			if( !PTXOperand::valid( type, b.type )  ) {
+				return "operand B type " + PTXOperand::toString( b.type ) 
+					+ " cannot be assigned to " + PTXOperand::toString( type );
+			}
+			if( !PTXOperand::valid( type, c.type )  ) {
+				return "operand C type " + PTXOperand::toString( c.type ) 
+					+ " cannot be assigned to " + PTXOperand::toString( type );
+			}
+			break;
+		}
 		default: return "check not implemented for " + toString(opcode); break;
 	}
 	return "";
@@ -2690,6 +2766,15 @@ std::string ir::PTXInstruction::toString() const {
 			return guard() + "lop3." + PTXOperand::toString( type ) + " "
 			    + d.toString() + ", " + a.toString() + ", " + b.toString()
 				+ ", " + c.toString() + ", " + toString(immLut);
+		}
+		case Dp4a: {
+			return guard() + "dp4a." + PTXOperand::toString( type )+ "." + PTXOperand::toString( btype ) + " " + d.toString() + ", " + a.toString() + ", " + b.toString() + ", " + c.toString();
+		}
+		case Dp2a: {
+			std::string result = guard() + "dp2a.";
+			result += modifierString( modifier, carry ) + ".";
+			result += PTXOperand::toString( type )+ "." + PTXOperand::toString( btype ) + " " + d.toString() + ", " + a.toString() + ", " + b.toString() + ", " + c.toString();
+			return result;
 		}
 		default: break;
 	}

@@ -67,7 +67,7 @@
 %token<text> OPCODE_BFI OPCODE_BFE OPCODE_TESTP OPCODE_TLD4 OPCODE_BAR
 %token<text> OPCODE_PREFETCH OPCODE_PREFETCHU OPCODE_SHFL
 /* PTX ISA 5.0  */
-%token<text> OPCODE_LOP3 OPCODE_SHF
+%token<text> OPCODE_LOP3 OPCODE_SHF OPCODE_DP4A OPCODE_DP2A
 %token<value> PREPROCESSOR_INCLUDE PREPROCESSOR_DEFINE PREPROCESSOR_IF 
 %token<value> PREPROCESSOR_IFDEF PREPROCESSOR_ELSE PREPROCESSOR_ENDIF 
 %token<value> PREPROCESSOR_LINE PREPROCESSOR_FILE
@@ -78,7 +78,7 @@
 
 %token<value> TOKEN_MAXNREG TOKEN_MAXNTID TOKEN_MAXNCTAPERSM TOKEN_MINNCTAPERSM 
 %token<value> TOKEN_SM11 TOKEN_SM12 TOKEN_SM13 TOKEN_SM20 TOKEN_MAP_F64_TO_F32
-%token<value> TOKEN_SM21 TOKEN_SM10 TOKEN_SM30 TOKEN_SM35 TOKEN_SM52
+%token<value> TOKEN_SM21 TOKEN_SM10 TOKEN_SM30 TOKEN_SM35 TOKEN_SM52 TOKEN_SM62
 %token<value> TOKEN_TEXMODE_INDEPENDENT TOKEN_TEXMODE_UNIFIED
 
 %token<value> TOKEN_CONST TOKEN_GLOBAL TOKEN_LOCAL TOKEN_PARAM TOKEN_PRAGMA TOKEN_PTR
@@ -261,7 +261,7 @@ singleInitializer : singleList |  '{' singleList '}' | '{' singleListSingle '}'
 	| singleListSingle;
 
 shaderModel : TOKEN_SM10 | TOKEN_SM11 | TOKEN_SM12 | TOKEN_SM13 | TOKEN_SM20
-	| TOKEN_SM21 | TOKEN_SM30 | TOKEN_SM35 | TOKEN_SM52;
+	| TOKEN_SM21 | TOKEN_SM30 | TOKEN_SM35 | TOKEN_SM52 | TOKEN_SM62;
 	
 floatingPointOption : TOKEN_MAP_F64_TO_F32;
 textureOption: TOKEN_TEXMODE_INDEPENDENT | TOKEN_TEXMODE_UNIFIED;
@@ -675,7 +675,7 @@ opcode : OPCODE_COS | OPCODE_SQRT | OPCODE_ADD | OPCODE_RSQRT | OPCODE_ADDC
 	| OPCODE_DIV | OPCODE_ABS | OPCODE_NEG | OPCODE_MIN | OPCODE_MAX
 	| OPCODE_MAD | OPCODE_MADC | OPCODE_SET | OPCODE_SETP | OPCODE_SELP
 	| OPCODE_SLCT | OPCODE_MOV | OPCODE_ST | OPCODE_COPYSIGN | OPCODE_SHFL
-	| OPCODE_SHF | OPCODE_CVT | OPCODE_CVTA | OPCODE_ISSPACEP 
+	| OPCODE_CVT | OPCODE_CVTA | OPCODE_ISSPACEP 
 	| OPCODE_AND | OPCODE_XOR | OPCODE_OR
 	| OPCODE_BRA | OPCODE_CALL | OPCODE_RET | OPCODE_EXIT | OPCODE_TRAP 
 	| OPCODE_BRKPT | OPCODE_SUBC | OPCODE_TEX | OPCODE_LD | OPCODE_LDU
@@ -685,7 +685,7 @@ opcode : OPCODE_COS | OPCODE_SQRT | OPCODE_ADD | OPCODE_RSQRT | OPCODE_ADDC
 	| OPCODE_PMEVENT | OPCODE_POPC | OPCODE_CLZ | OPCODE_BFIND | OPCODE_BREV
 	| OPCODE_BFI | OPCODE_TESTP | OPCODE_TLD4
 	| OPCODE_PREFETCH | OPCODE_PREFETCHU 
-	| OPCODE_LOP3 | OPCODE_SHF;
+	| OPCODE_LOP3 | OPCODE_SHF | OPCODE_DP4A | OPCODE_DP2A;
 
 uninitializableDeclaration : uninitializable addressableVariablePrefix 
 	identifier arrayDimensions ';'
@@ -858,7 +858,7 @@ instruction : ftzInstruction2 | ftzInstruction3 | approxInstruction2
 	| ld | ldu | mad | mad24 | madc | membar | mov | mul24 | mul | notInstruction
 	| pmevent | popc | prefetch | prefetchu | prmt | rcpSqrtInstruction | red
 	| ret | sad | selp | set | setp | slct | st | suld | suq | sured | sust
-	| testp | tex | tld4 | trap | txq | vote | shfl | shf;
+	| testp | tex | tld4 | trap | txq | vote | shfl | shf | lop3 | dp4a | dp2a;
 
 basicInstruction3Opcode : OPCODE_AND | OPCODE_OR | OPCODE_SHF 
 	| OPCODE_REM | OPCODE_SHL | OPCODE_SHR | OPCODE_XOR | OPCODE_COPYSIGN;
@@ -1631,6 +1631,26 @@ lopLogicalOperation: TOKEN_DECIMAL_CONSTANT
 lop3 : OPCODE_LOP3 dataType operand ',' operand ',' operand ',' operand ',' lopLogicalOperation ';'
 {
 	state.instruction( $<text>1, $<value>2 );
+};
+
+btype: dataTypeId
+{
+	state.btype( $<value>1 );
+};
+
+dp4a : OPCODE_DP4A dataType btype operand ',' operand ',' operand ',' operand ';'
+{
+	state.instruction( $<text>1, $<value>2 );
+};
+
+dp2aModifier: hiOrLo
+{
+	state.modifier( $<value>1);
+};
+
+dp2a: OPCODE_DP2A dp2aModifier dataType btype operand ',' operand ',' operand ',' operand ';'
+{
+	state.instruction( $<text>1, $<value>3 );
 };
 
 %%

@@ -550,7 +550,7 @@ namespace test {
 			std::cout << "Status:" << status.str() << std::endl;
 		} 
 		bool equal = (d == d_cuda);
-		if (!equal) {
+		if (!equal || verbose) {
 			uint32_t* d_p = (uint32_t *) ArrayWithSize::getPointer(d);
 			uint32_t* dcuda_p = (uint32_t *) ArrayWithSize::getPointer(d_cuda);
 			std::cout << "Error when check correcty" << std::endl;

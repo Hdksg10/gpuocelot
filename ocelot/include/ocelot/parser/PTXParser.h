@@ -264,6 +264,7 @@ namespace parser
 					void defaultPermute();
 					void full();
 					void immLut( int token );
+					void btype( int token );
 
 					void instruction();
 					void instruction( const std::string& opcode, int dataType );

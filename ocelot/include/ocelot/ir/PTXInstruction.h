@@ -115,6 +115,8 @@ namespace ir {
 			Invalid_Opcode,
 			// PTX 5.0 ISA
 			Lop3,
+			Dp4a,
+			Dp2a,
 		};
 
 		/*!
@@ -528,6 +530,8 @@ namespace ir {
 			/*! shift mode for shf instruction */
 			ShiftMode shiftMode;
 
+			/*! btype for dp4a/dp2a instruction */
+			PTXOperand::DataType btype;
 		};
 		
 		union {

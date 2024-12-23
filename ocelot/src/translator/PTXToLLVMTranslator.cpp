@@ -25,7 +25,9 @@
 // Standard Library Includes
 #include <climits>
 #include <limits>
+#include <memory>
 #include "ocelot/ir/LLVMStatement.h"
+#include "ocelot/ir/PTXOperand.h"
 
 // Preprocessor Macros
 #ifdef __i386__
@@ -1266,7 +1268,9 @@ void PTXToLLVMTranslator::_translate( const ir::PTXInstruction& i,
 	case ir::PTXInstruction::Trap:     _translateTrap( i );        break;
 	case ir::PTXInstruction::Vote:     _translateVote( i );        break;
 	case ir::PTXInstruction::Xor:      _translateXor( i );         break;
-	case ir::PTXInstruction::Lop3:     _translateLop3( i, block );        break;
+	case ir::PTXInstruction::Lop3:     _translateLop3( i, block ); break;
+	case ir::PTXInstruction::Dp4a:     _translateDp4a( i );		   break;
+	case ir::PTXInstruction::Dp2a:     _translateDp2a( i );		   break;
 	default:
 	{
 		assertM( false, "Opcode " 
@@ -6994,10 +6998,273 @@ void PTXToLLVMTranslator::_translateLop3( const ir::PTXInstruction& i, const ana
 	_add(loadResult);
 }
 
+void PTXToLLVMTranslator::_translateDp4a( const ir::PTXInstruction& i ) {
+	// cast to 4*i8 vector
+	ir::LLVMBitcast veca, vecb;
+	veca.a = _translate(i.a);
+	vecb.a = _translate(i.b);
+	veca.d.name = _tempRegister();
+	veca.d.type.category = ir::LLVMInstruction::Type::Vector;
+	veca.d.type.type = ir::LLVMInstruction::I8;
+	veca.d.type.vector = 4;
+	vecb.d.name = _tempRegister();
+	vecb.d.type = veca.d.type;
+
+	_add(veca);
+	_add(vecb);
+
+	// extension to 32bit i32
+	std::unique_ptr<ir::LLVMConversionInstruction> exta, extb;
+	if (i.type == ir::PTXOperand::s32) {
+		exta = std::make_unique<ir::LLVMSext>();
+	}
+	else
+	{
+		exta = std::make_unique<ir::LLVMZext>();
+	}
+	if (i.btype == ir::PTXOperand::s32) {
+		extb = std::make_unique<ir::LLVMSext>();
+	}
+	else {
+		extb = std::make_unique<ir::LLVMZext>();
+	}
+	// ir::LLVMZext exta, extb;
+	exta->a = veca.d;
+	extb->a = vecb.d;
+
+	exta->d.name = _tempRegister();
+	exta->d.type.category = ir::LLVMInstruction::Type::Vector;
+	exta->d.type.type = ir::LLVMInstruction::I32;
+	exta->d.type.vector = 4;
+
+	extb->d.name = _tempRegister();
+	extb->d.type = exta->d.type;
+
+	_add(*exta);
+	_add(*extb);
+
+	// element-wise production
+	ir::LLVMMul mul;
+	mul.d.name = _tempRegister();
+	mul.d.type = exta->d.type;
+	mul.a = exta->d;
+	mul.b = extb->d;
+
+	_add(mul);
+
+	// reduce sum
+	ir::LLVMExtractelement extract1, extract2, extract3, extract4;
+	extract1.a = mul.d;
+	extract1.b.type.type = ir::LLVMInstruction::I32;
+	extract1.b.type.category = ir::LLVMInstruction::Type::Element;
+	extract1.b.constant = true;
+	extract1.b.i32 = 0;
+	extract1.d.name = _tempRegister();
+	extract1.d.type = extract1.b.type;
+
+	extract2.a = mul.d;
+	extract2.b = extract1.b;
+	extract2.b.constant = true;
+	extract2.b.i32 = 1;
+	extract2.d.type = extract2.b.type;
+	extract2.d.name = _tempRegister();
+
+	extract3.a = mul.d;
+	extract3.b = extract1.b;
+	extract3.b.constant = true;
+	extract3.b.i32 = 2;
+	extract3.d.type = extract3.b.type;
+	extract3.d.name = _tempRegister();
+
+	extract4.a = mul.d;
+	extract4.b = extract1.b;
+	extract4.b.constant = true;
+	extract4.b.i32 = 3;
+	extract4.d.type = extract4.b.type;
+	extract4.d.name = _tempRegister();
+
+	_add(extract1);
+	_add(extract2);
+	_add(extract3);
+	_add(extract4);
+
+	ir::LLVMAdd sum12, sum34, sum_final;
+	sum12.a = extract1.d;
+	sum12.b = extract2.d;
+	sum12.d.name = _tempRegister();
+	sum12.d.type = extract1.d.type;
+
+	sum34.a = extract3.d;
+	sum34.b = extract4.d;
+	sum34.d.name = _tempRegister();
+	sum34.d.type = extract3.d.type;
+
+	sum_final.a = sum12.d;
+	sum_final.b = sum34.d;
+	sum_final.d.name = _tempRegister();
+	sum_final.d.type = sum12.d.type;
+
+	_add(sum12);
+	_add(sum34);
+	_add(sum_final);
+
+	// add c
+	ir::LLVMAdd add;
+	add.a = sum_final.d;
+	add.b = _translate(i.c);
+	add.d = _destination(i);
+	_add(add);
+}
+
+void PTXToLLVMTranslator::_translateDp2a( const ir::PTXInstruction& i ) {
+	// cast a to 2*i16 vector
+	ir::LLVMBitcast veca;
+	veca.a = _translate(i.a);
+	veca.d.name = _tempRegister();
+	veca.d.type.category = ir::LLVMInstruction::Type::Vector;
+	veca.d.type.type = ir::LLVMInstruction::I16;
+	veca.d.type.vector = 2;
+
+	ir::LLVMTrunc truncb;
+	ir::LLVMLshr lshrb;
+	ir::LLVMBitcast vecb;
+	if (i.modifier & ir::PTXInstruction::hi) {
+		lshrb.a = _translate(i.b);
+		lshrb.b.type.type = ir::LLVMInstruction::I32;
+		lshrb.b.type.category = ir::LLVMInstruction::Type::Element;
+		lshrb.b.constant = true;
+		lshrb.b.i32 = 16;
+		lshrb.d = ir::LLVMInstruction::Operand(_tempRegister(), lshrb.b.type);
+		truncb.a = lshrb.d;
+		_add(lshrb);
+	}
+	else {
+		truncb.a = _translate(i.b);
+	}
+	truncb.d.name = _tempRegister();
+	truncb.d.type.category = ir::LLVMInstruction::Type::Element;
+	truncb.d.type.type = ir::LLVMInstruction::I16;
+	_add(truncb);
+	vecb.a = truncb.d;
+	vecb.d.name = _tempRegister();
+	vecb.d.type.category = ir::LLVMInstruction::Type::Vector;
+	vecb.d.type.type = ir::LLVMInstruction::I8;
+	vecb.d.type.vector = 2;
+	
+	_add(veca);
+	_add(vecb);
+
+	// extension to 32bit i32
+	std::unique_ptr<ir::LLVMConversionInstruction> exta, extb;
+	if (i.type == ir::PTXOperand::s32) {
+		exta = std::make_unique<ir::LLVMSext>();
+	}
+	else
+	{
+		exta = std::make_unique<ir::LLVMZext>();
+	}
+	if (i.btype == ir::PTXOperand::s32) {
+		extb = std::make_unique<ir::LLVMSext>();
+	}
+	else {
+		extb = std::make_unique<ir::LLVMZext>();
+	}
+	// ir::LLVMZext exta, extb;
+	exta->a = veca.d;
+	extb->a = vecb.d;
+
+	exta->d.name = _tempRegister();
+	exta->d.type.category = ir::LLVMInstruction::Type::Vector;
+	exta->d.type.type = ir::LLVMInstruction::I32;
+	exta->d.type.vector = 2;
+
+	extb->d.name = _tempRegister();
+	extb->d.type = exta->d.type;
+
+	_add(*exta);
+	_add(*extb);
+
+	// element-wise production
+	ir::LLVMMul mul;
+	mul.d.name = _tempRegister();
+	mul.d.type = exta->d.type;
+	mul.a = exta->d;
+	mul.b = extb->d;
+
+	_add(mul);
+
+	// reduce sum
+	// ir::LLVMExtractelement extract1, extract2, extract3, extract4;
+	ir::LLVMExtractelement extract1, extract2;
+	extract1.a = mul.d;
+	extract1.b.type.type = ir::LLVMInstruction::I32;
+	extract1.b.type.category = ir::LLVMInstruction::Type::Element;
+	extract1.b.constant = true;
+	extract1.b.i32 = 0;
+	extract1.d.name = _tempRegister();
+	extract1.d.type = extract1.b.type;
+
+	extract2.a = mul.d;
+	extract2.b = extract1.b;
+	extract2.b.constant = true;
+	extract2.b.i32 = 1;
+	extract2.d.type = extract2.b.type;
+	extract2.d.name = _tempRegister();
+
+	// extract3.a = mul.d;
+	// extract3.b = extract1.b;
+	// extract3.b.constant = true;
+	// extract3.b.i32 = 2;
+	// extract3.d.type = extract3.b.type;
+	// extract3.d.name = _tempRegister();
+
+	// extract4.a = mul.d;
+	// extract4.b = extract1.b;
+	// extract4.b.constant = true;
+	// extract4.b.i32 = 3;
+	// extract4.d.type = extract4.b.type;
+	// extract4.d.name = _tempRegister();
+
+	_add(extract1);
+	_add(extract2);
+	// _add(extract3);
+	// _add(extract4);
+	
+	// ir::LLVMAdd sum12, sum34, sum_final;
+	ir::LLVMAdd sum12;
+	sum12.a = extract1.d;
+	sum12.b = extract2.d;
+	sum12.d.name = _tempRegister();
+	sum12.d.type = extract1.d.type;
+
+	// sum34.a = extract3.d;
+	// sum34.b = extract4.d;
+	// sum34.d.name = _tempRegister();
+	// sum34.d.type = extract3.d.type;
+
+	// sum_final.a = sum12.d;
+	// sum_final.b = sum34.d;
+	// sum_final.d.name = _tempRegister();
+	// sum_final.d.type = sum12.d.type;
+
+	_add(sum12);
+	// _add(sum34);
+	// _add(sum_final);
+
+	// add c
+	ir::LLVMAdd add;
+	// add.a = sum_final.d;
+	add.a = sum12.d;
+	add.b = _translate(i.c);
+	add.d = _destination(i);
+	_add(add);
+}
+
 void PTXToLLVMTranslator::_bitcast( const ir::PTXInstruction& i )
 {
 	_bitcast( i.d, i.a );
 }
+
 
 void PTXToLLVMTranslator::_bitcast( const ir::PTXOperand& d, 
 	const ir::PTXOperand& a )

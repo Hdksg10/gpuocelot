@@ -1,19 +1,15 @@
 #include <ptx_test/TestInstruction.h>
-#include <cstdint>
-#include <iostream>
-#include <vector>
-
 
 
 
 namespace test {
-    class TestInstructionLop3 : public TestInstruction {
+    class TestInstructionDp4a : public TestInstruction {
     public:
 
-        TestInstructionLop3() {
-            name = "TestInstructionLop3";
+        TestInstructionDp4a() {
+            name = "TestInstructionDp4a";
 
-            description = "A unit test for the LOP3 instruction.";
+            description = "A unit test for the DP4A instruction.";
         }
     protected:
 
@@ -33,11 +29,11 @@ namespace test {
 int main( int argc, char** argv )
 {
 	hydrazine::ArgumentParser parser( argc, argv );
-	test::TestInstructionLop3 test;
+	test::TestInstructionDp4a test;
 	parser.description( test.testDescription() );
 
-	parser.parse("-c", test.configPath, "../instruction/lop3/config.test", "Test configuration path.");
-	parser.parse( "-i", test.input, "../instruction/lop3/test_lop3.ptx",
+	parser.parse("-c", test.configPath, "../instruction/dp4a/config.test", "Test configuration path.");
+	parser.parse( "-i", test.input, "../instruction/dp4a/test_dp4a.ptx",
 		"Test PTX path.");
 	parser.parse( "-r", test.recursive, true, 
 		"Recursively search directories.");

@@ -14,8 +14,6 @@ namespace test {
             name = "TestInstructionShf";
 
             description = "A unit test for the SHF instruction.";
-            description += " Test Points: 1) Execute a kernel with a loop. ";
-            description += "2) Execute a matrix multiply kernel.";
         }
     protected:
 

@@ -4,8 +4,8 @@
 	\brief The source file for the PTXParser class.
 */
 
-#ifndef PTX_PARSER_CPP_INCLUDED
-#define PTX_PARSER_CPP_INCLUDED
+#ifndef PTXPARSER_H
+#define PTXPARSER_H
 
 // Ocelot Includes
 #include <ocelot/parser/PTXParser.h>
@@ -16,6 +16,7 @@
 
 // Standard Library Includes
 #include <cassert>
+#include "ocelot/ir/PTXInstruction.h"
 
 // Preprocessor Macros
 #define throw_exception( messageData, type ) \
@@ -606,7 +607,8 @@ namespace parser
 		else if( token == TOKEN_SM21 ) statement.targets.push_back( "sm_21" );
 		else if( token == TOKEN_SM30 ) statement.targets.push_back( "sm_30" );
 		else if( token == TOKEN_SM35 ) statement.targets.push_back( "sm_35" );
-		else if (token == TOKEN_SM52 )  statement.targets.push_back( "sm_52" );
+		else if (token == TOKEN_SM52 ) statement.targets.push_back( "sm_52" );
+		else if (token == TOKEN_SM62 ) statement.targets.push_back( "sm_62" );
 		else if( token == TOKEN_MAP_F64_TO_F32 )
 		{
 			statement.targets.push_back( "map_f64_to_f32" );
@@ -1798,6 +1800,11 @@ namespace parser
 	{
 		statement.instruction.immLut = static_cast<uint8_t>( token );
 	}
+
+	void PTXParser::State::btype( int token )
+	{
+		statement.instruction.btype = tokenToDataType( token );
+	}
 	
 	void PTXParser::State::defaultPermute()
 	{
@@ -2583,6 +2590,8 @@ namespace parser
 		if( string == "xor" ) return ir::PTXInstruction::Xor;
 		/* PTX 5.0 ISA*/
 		if( string == "lop3" ) return ir::PTXInstruction::Lop3;
+		if( string == "dp4a" ) return ir::PTXInstruction::Dp4a;
+		if( string == "dp2a" ) return ir::PTXInstruction::Dp2a;
 		return ir::PTXInstruction::Nop;
 	}
 
@@ -3006,5 +3015,5 @@ namespace parser
 	}
 }
 
-#endif
+#endif /* PTXPARSER_H */
 

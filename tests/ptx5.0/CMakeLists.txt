@@ -25,6 +25,7 @@ target_link_libraries(${PROJECT_NAME}_tests_new_ptx PUBLIC CUDA::cuda_driver ${P
 
 function(ptx_add_tests name)
     file(GLOB TESTS "instruction/${name}/Test*.cpp")
+    message(STATUS ${name})
     foreach(TEST ${TESTS})
         get_filename_component(TEST_WE ${TEST} NAME_WE)
         set(TEST_NAME ${PROJECT_NAME}_${name}_${TEST_WE})
@@ -44,3 +45,5 @@ endfunction()
 
 ptx_add_tests(lop3)
 ptx_add_tests(shf)
+ptx_add_tests(dp4a)
+ptx_add_tests(dp2a)

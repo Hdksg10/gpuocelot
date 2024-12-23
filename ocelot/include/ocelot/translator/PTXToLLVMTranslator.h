@@ -179,6 +179,8 @@ protected:
 	/* PTX 5.0 ISA*/
 	void _translateLop3( const ir::PTXInstruction& i, 
 		const analysis::DataflowGraph::Block& block );
+	void _translateDp4a( const ir::PTXInstruction& i );
+	void _translateDp2a( const ir::PTXInstruction& i );
 
 protected:
 	void _bitcast( const ir::PTXInstruction& i );
