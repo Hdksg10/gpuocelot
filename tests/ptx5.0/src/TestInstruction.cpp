@@ -1,8 +1,11 @@
 #include <ptx_test/TestInstruction.h>
 #include <sys/types.h>
+#include <cstddef>
 #include <cstdint>
 #include <vector>
+#include <boost/filesystem.hpp>
 #include <cmath>
+#include "ocelot/ir/PTXOperand.h"
 
 #ifdef REPORT_BASE
 #undef REPORT_BASE
@@ -141,8 +144,30 @@ namespace test {
 	}
 
 	void TestInstruction::_loadConfig() {
-		config = PTXKernelConfig(configPath);
-		nParams = config.paramVector.size();
+		if (recursive) {
+			// load all configs in path with endname ".test"
+			namespace fs = boost::filesystem;
+			fs::path path = configPath;
+			if (!fs::is_directory(path)) {
+				if (fs::is_regular_file(path)) {
+					// use relative path
+					path = path.parent_path();
+				}
+			}
+			fs::directory_iterator end;
+			for (fs::directory_iterator file(path); file != end; ++file) {
+				if (file->path().extension() == ".test") {
+					configs.emplace_back(file->path().string());
+				}
+			}
+		}
+		else {
+			configs.emplace_back(configPath);
+		}
+
+		if (verbose) {
+			std::cout << "Found " << configs.size() << " configurations." << std::endl;
+		}
 	}
 
 	template<typename T>
@@ -288,6 +313,150 @@ namespace test {
 		}
 	}
 
+	TestInstruction::ArrayWithSize TestInstruction::_allocArray(const std::vector<PTXKernelConfig::Value>& values, ir::PTXOperand::DataType type) {
+		switch (type) {
+			case ir::PTXOperand::DataType::s32: {
+				auto array = _allocArray(ir::PTXOperand::DataType::s32, ir::Dim3(values.size()), false);
+				for (size_t i = 0; i < values.size(); ++i) {
+					array.array.p_i32[i] = values[i].s32;
+				}
+				return array;
+			}
+			case ir::PTXOperand::DataType::s64: {
+				auto array = _allocArray(ir::PTXOperand::DataType::s64, ir::Dim3(values.size()), false);
+				for (size_t i = 0; i < values.size(); ++i) {
+					array.array.p_i64[i] = values[i].s64;
+				}
+				return array;
+			}
+			case ir::PTXOperand::DataType::u32: {
+				auto array = _allocArray(ir::PTXOperand::DataType::u32, ir::Dim3(values.size()), false);
+				for (size_t i = 0; i < values.size(); ++i) {
+					array.array.p_u32[i] = values[i].u32;
+				}
+				return array;
+			}
+			case ir::PTXOperand::DataType::u64: {
+				auto array = _allocArray(ir::PTXOperand::DataType::u64, ir::Dim3(values.size()), false);
+				for (size_t i = 0; i < values.size(); ++i) {
+					array.array.p_u64[i] = values[i].u64;
+				}
+				return array;
+			}
+			case ir::PTXOperand::DataType::f32: {
+				auto array = _allocArray(ir::PTXOperand::DataType::f32, ir::Dim3(values.size()), false);
+				for (size_t i = 0; i < values.size(); ++i) {
+					array.array.p_f32[i] = values[i].f32;
+				}
+				return array;
+			}
+			case ir::PTXOperand::DataType::f64: {
+				auto array = _allocArray(ir::PTXOperand::DataType::f64, ir::Dim3(values.size()), false);
+				for (size_t i = 0; i < values.size(); ++i) {
+					array.array.p_f64[i] = values[i].f64;
+				}
+				return array;
+			}
+			default: {
+				throw std::invalid_argument("Unsupported data type for array allocation.");
+			}
+		}
+	}
+
+	void TestInstruction::copyToArray(const ArrayWithSize& array, const std::vector<PTXKernelConfig::Value>& values) {
+		switch (array.type) {
+			case ir::PTXOperand::DataType::s32: {
+				for (size_t i = 0; i < values.size(); ++i) {
+					array.array.p_i32[i] = values[i].s32;
+				}
+				break;
+			}
+			case ir::PTXOperand::DataType::s64: {
+				for (size_t i = 0; i < values.size(); ++i) {
+					array.array.p_i64[i] = values[i].s64;
+				}
+				break;
+			}
+			case ir::PTXOperand::DataType::u32: {
+				for (size_t i = 0; i < values.size(); ++i) {
+					array.array.p_u32[i] = values[i].u32;
+				}
+				break;
+			}
+			case ir::PTXOperand::DataType::u64: {
+				for (size_t i = 0; i < values.size(); ++i) {
+					array.array.p_u64[i] = values[i].u64;
+				}
+				break;
+			}
+			case ir::PTXOperand::DataType::f32: {
+				for (size_t i = 0; i < values.size(); ++i) {
+					array.array.p_f32[i] = values[i].f32;
+				}
+				break;
+			}
+			case ir::PTXOperand::DataType::f64: {
+				for (size_t i = 0; i < values.size(); ++i) {
+					array.array.p_f64[i] = values[i].f64;
+				}
+				break;
+			}
+			default: {
+				throw std::invalid_argument("Unsupported data type for array allocation.");
+			}
+		}
+	}
+
+	void TestInstruction::printArray(const ArrayWithSize& array) {
+		switch (array.type) {
+			case ir::PTXOperand::DataType::s32: {
+				for (size_t i = 0; i < array.dim3.size(); ++i) {
+					std::cout << array.array.p_i32[i] << " ";
+				}
+				std::cout << std::endl;
+				break;
+			}
+			case ir::PTXOperand::DataType::s64: {	
+				for (size_t i = 0; i < array.dim3.size(); ++i) {
+					std::cout << array.array.p_i64[i] << " ";
+				}
+				std::cout << std::endl;
+				break;
+			}
+			case ir::PTXOperand::DataType::u32: {
+				for (size_t i = 0; i < array.dim3.size(); ++i) {
+					std::cout << array.array.p_u32[i] << " ";
+				}
+				std::cout << std::endl;
+				break;
+			}
+			case ir::PTXOperand::DataType::u64: {
+				for (size_t i = 0; i < array.dim3.size(); ++i) {
+					std::cout << array.array.p_u64[i] << " ";
+				}
+				std::cout << std::endl;
+				break;
+			}
+			case ir::PTXOperand::DataType::f32: {
+				for (size_t i = 0; i < array.dim3.size(); ++i) {
+					std::cout << array.array.p_f32[i] << " ";
+				}
+				std::cout << std::endl;
+				break;
+			}
+			case ir::PTXOperand::DataType::f64: {
+				for (size_t i = 0; i < array.dim3.size(); ++i) {
+					std::cout << array.array.p_f64[i] << " ";
+				}
+				std::cout << std::endl;
+				break;
+			}
+			default: {
+				throw std::invalid_argument("Unsupported data type for array printing.");
+			}
+		}
+	}
+
 	bool TestInstruction::_freeArray(ArrayWithSize array) {
 		switch (array.type) {
 			case ir::PTXOperand::DataType::f64:
@@ -363,6 +532,7 @@ namespace test {
 
 	
 	bool TestInstruction::_runPTXKernel(std::vector<ArrayWithSize> args){
+		auto _config = *config;
 		// Get CUDA Device
 		CUresult r;
 		if ((r = cuInit(0)) != CUDA_SUCCESS) {
@@ -386,7 +556,7 @@ namespace test {
 		CUmodule module;
 		CUfunction kernel;
 		CUDA_CHECK(cuModuleLoad(&module, input.c_str()), "cannot load cuda module with error code: ");
-		CUDA_CHECK(cuModuleGetFunction(&kernel, module, config.kernelName.c_str()), "cannot get cuda function with error code: ");
+		CUDA_CHECK(cuModuleGetFunction(&kernel, module, _config.kernelName.c_str()), "cannot get cuda function with error code: ");
 	
 		// Unpack args
 		void* d_host = nullptr;
@@ -412,20 +582,11 @@ namespace test {
 		}
 		
 		void** kernelParams_ptr = kernelParams.data();
-		// void* kernelParams_ptr[] = {
-		// 	&unpackedParams[0],
-		// 	&unpackedParams[1],
-		// 	&unpackedParams[2],
-		// 	&unpackedParams[3],
-		// };
-		// for (int i = 0 ; i < 4; i++) {
-		// 	std::cout << "upp: " << kernelParams_ptr[i] << ", kpp:" << kernelParams[i] << std::endl;
-		// }
 		// Launch kernel
 		CUDA_CHECK(cuLaunchKernel(
 					kernel,
-					config.blocks.x, config.blocks.y, config.blocks.z,
-					config.threads.x, config.threads.y, config.threads.z,
+					_config.blocks.x, _config.blocks.y, _config.blocks.z,
+					_config.threads.x, _config.threads.y, _config.threads.z,
 					0, 0,
 					kernelParams_ptr,
 					nullptr), "cannot launch cuda function with error code: ");
@@ -440,7 +601,7 @@ namespace test {
 		CUDA_CHECK(cuMemFree(d_device), "cannot free device dest memory with error code:  ");
 
 		for (size_t i = 0; i < unpackedParams.size(); i++) {
-			if (i == config.destinationIdx) continue; // we have free dest memory
+			if (i == _config.destinationIdx) continue; // we have free dest memory
 			CUDA_CHECK(cuMemFree((CUdeviceptr)unpackedParams[i]), "cannot free device argument memory with error code:  ");
 		}
 
@@ -452,6 +613,7 @@ namespace test {
 	}
 
 	bool TestInstruction::_runLLVMKernel(std::vector<ArrayWithSize> args) {
+		auto _config = *config;
 		bool result = true;
 		bool loaded = false;
 		// load kernel function
@@ -465,7 +627,7 @@ namespace test {
 			status << "failed to load module '" << input << "'\n";
 			return (result = false);
 		}
-		kernel = module.getKernel(config.kernelName);
+		kernel = module.getKernel(_config.kernelName);
 		if (!kernel) {
 			status << "failed to get kernel\n";
 			return (result = false);
@@ -515,7 +677,7 @@ namespace test {
 		int level = api::OcelotConfiguration::get().executive.optimizationLevel;
 		auto executableKerel = new executive::LLVMExecutableKernel(*kernel, 0, 
 		( translator::Translator::OptimizationLevel ) level);
-		for (size_t i = 0; i < nParams; i++) {
+		for (size_t i = 0; i < _config.nParams; i++) {
 			ss << executableKerel->name << "_param_" << i;
 			std::string paramName = ss.str();
 			ss.str("");
@@ -533,26 +695,42 @@ namespace test {
 		executableKerel->updateArgumentMemory();
 
 		executableKerel->setKernelShape( 1, 1, 1 );
-		executableKerel->launchGrid( config.blocks.x, config.blocks.y, config.blocks.z );
+		executableKerel->launchGrid( _config.blocks.x, _config.blocks.y, _config.blocks.z );
 
 		return result;
 	}
 
-	bool TestInstruction::runPTXTest() {
+	bool TestInstruction::_runPTXTest() {
+		auto _config = *config;
 		bool result = true;
 		std::vector<ArrayWithSize> args;
-		ArrayWithSize d = _allocArray(config.paramVector[config.destinationIdx], config.sizeVector[config.destinationIdx]);
+		ArrayWithSize d = _allocArray(_config.paramVector[_config.destinationIdx], _config.sizeVector[_config.destinationIdx]);
 		d.returnAray = true;
+
 		// build random test array
-		for (int i = 0; i < config.paramVector.size(); i++) {
-			auto type = config.paramVector[i];
-			auto dim3 = config.sizeVector[i];
-			if (i == config.destinationIdx)
+		for (size_t i = 0; i < _config.paramVector.size(); i++) {
+			auto type = _config.paramVector[i];
+			auto dim3 = _config.sizeVector[i];
+			if (i == _config.destinationIdx)
 				args.push_back(d);
 			else
 				args.push_back(_allocArray(type, dim3, true));
 		}
 		
+		// if spicified input data
+		for (size_t i = 0; i < _config.valuesVector.size(); i++) {
+			// auto type = _config.paramVector[i];
+			auto dim3 = _config.sizeVector[i];
+			// if (i == _config.destinationIdx)
+			// 	args.push_back(d);
+			// else
+			// 	args.push_back(_allocArray(type, dim3, true));
+			const auto & values = _config.valuesVector[i];
+			if (values.size() == args[i].dim3.size()) {
+				copyToArray(args[i], values);
+			}
+		}
+
 		result = _runPTXKernel(args) && result;
 		// copy dest array
 		auto d_cuda = _allocArray(d);
@@ -565,22 +743,14 @@ namespace test {
 		} 
 		bool equal = (d == d_cuda);
 		if (!equal || verbose) {
-			uint32_t* d_p = (uint32_t *) ArrayWithSize::getPointer(d);
-			uint32_t* dcuda_p = (uint32_t *) ArrayWithSize::getPointer(d_cuda);
-			std::cout << "Error when check correcty" << std::endl;
-			std::cout << "PTX result: ";
-			for (int i = 0; i < d_cuda.dim3.size(); i++)
-			{
-				std::cout << dcuda_p[i] <<  " " ;
+			if (!equal) {
+				std::cout << "Error when check correcty" << std::endl;
 			}
-			std::cout << std::endl;
+			std::cout << "PTX result: ";
+			printArray(d);
 
 			std::cout << "IR result: ";
-			for (int i = 0; i < d.dim3.size(); i++)
-			{
-				std::cout << d_p[i] <<  " " ;
-			}
-			std::cout << std::endl;
+			printArray(d_cuda);
 
 			std::cout << "Argument: " << std::endl;
 			int argIdx = 0;
@@ -589,16 +759,10 @@ namespace test {
 				if (args[i].returnAray) continue;
 				std::cout << "arg" << argIdx << ": ";
 				argIdx++;
-				uint32_t* p = (uint32_t *) ArrayWithSize::getPointer(args[i]);
-				for (int j = 0; j < args[i].dim3.size(); j++)
-				{
-					std::cout << p[j] <<  " " ;
-				}
-				std::cout << std::endl;
+				printArray(args[i]);
 			}
 		}
-		
-
+		_freeArray(d_cuda);
 		for (auto&& arg:args){
 			_freeArray(arg);
 		}
@@ -606,6 +770,21 @@ namespace test {
 		return result && equal;
 	}
 
+	bool TestInstruction::runPTXTest() {
+		bool result = true;
+		for (auto&& _config:configs){
+			if (verbose) {
+				std::cout << "Running test: " << _config.kernelName << std::endl;
+			}
+			config = &_config;
+			bool r = _runPTXTest();
+			if (verbose) {
+				std::cout << "Test result: " << (r ? "PASS" : "FAIL") << std::endl;
+			}
+			result = r && result;
+		}
+		return result;
+	}
 }
 
 // int main( int argc, char** argv )

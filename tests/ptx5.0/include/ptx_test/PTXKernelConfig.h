@@ -1,7 +1,9 @@
-#ifndef PTX_KERNEL_CONFIG_H_INCLUDED
-#define PTX_KERNEL_CONFIG_H_INCLUDED
+#ifndef PTXKERNELCONFIG_H
+#define PTXKERNELCONFIG_H
 
 #include <cuda.h>
+#include <cstddef>
+#include <cstdint>
 #include <fstream>
 #include <iostream>
 
@@ -11,8 +13,18 @@
 #include <hydrazine/json.h>
 #include <hydrazine/Exception.h>
 
+
+
 class PTXKernelConfig {
 	public:
+		union Value {
+			int64_t s64;
+			double f64;
+			int32_t s32;
+			uint32_t u32;
+			uint64_t u64;
+			float f32;
+		};
 		using ParamVector = std::vector<ir::PTXOperand::DataType>;
 		using SizeVector = std::vector<ir::Dim3>;
 		ir::Dim3 threads; // threads per block
@@ -21,6 +33,9 @@ class PTXKernelConfig {
 		ParamVector paramVector;
 		SizeVector sizeVector;
 		int destinationIdx;
+		size_t nParams;
+		std::vector<std::vector<Value>> valuesVector;
+		
 	public:
 		PTXKernelConfig();
 		PTXKernelConfig(ir::Dim3 _threads, ir::Dim3 _blocks, std::string _kernelName, const ParamVector& _paramVector, const SizeVector& _sizeVector, int _destinationIdx);
@@ -33,4 +48,4 @@ class PTXKernelConfig {
 
 
 
-#endif
+#endif /* PTXKERNELCONFIG_H */

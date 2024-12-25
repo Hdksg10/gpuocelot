@@ -63,18 +63,16 @@ namespace test {
 			// template<typename... Args>
 			// using ParamTuple = std::tuple<Args ...>;
 		protected:
-
-			PTXKernelConfig config;
-			size_t nParams;
+			std::vector<PTXKernelConfig> configs;
+			PTXKernelConfig* config;
+			// config operations
 			void _loadConfig();
-			bool _testTranslate();
 			
-			// template<typename T, typename... Args>
-			// bool _runPTXKernel(ArrayWithSize<T> d, Args... args);
-			// bool _runPTXKernel(ArrayWithSize d, std::vector<ArrayWithSize> args);
 			bool _runPTXKernel(std::vector<ArrayWithSize> args);
 			bool _runLLVMKernel(std::vector<ArrayWithSize> args);
+			bool _runPTXTest();
 			bool runPTXTest();
+
 
 			template<typename T>
 			T _handle_arg(T arg);
@@ -84,8 +82,13 @@ namespace test {
 			ArrayWithSize _allocArray(ir::PTXOperand::DataType type, ir::Dim3 dim);
 			ArrayWithSize _allocArray(ir::PTXOperand::DataType type, ir::Dim3 dim, bool random);
 			ArrayWithSize _allocArray(const ArrayWithSize& array);
+			ArrayWithSize _allocArray(const std::vector<PTXKernelConfig::Value>& values, ir::PTXOperand::DataType type);
 
-			bool _freeArray(ArrayWithSize array);
+			static void copyToArray(const ArrayWithSize& array, const std::vector<PTXKernelConfig::Value>& values);
+
+			static void printArray(const ArrayWithSize& array);
+
+			static bool _freeArray(ArrayWithSize array);
 
 			template<typename T>
 			void _randomArray(T* a, ir::Dim3 dim);
@@ -94,8 +97,7 @@ namespace test {
 
 			template<typename T>
 			T _random();
-			
-			
+
 
 		public:
 			TestInstruction();
@@ -106,7 +108,7 @@ namespace test {
 			std::string configPath;
 			/*! \brief Total amount of time to spend on tests in seconds */
 			hydrazine::Timer::Second timeLimit;
-			bool recursive;
+			bool recursive = false;
 			bool output;
 			
 			ir::Module module;

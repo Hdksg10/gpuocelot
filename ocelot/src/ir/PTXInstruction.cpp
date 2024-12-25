@@ -524,7 +524,7 @@ std::string ir::PTXInstruction::valid() const {
 				if( ( modifier & sat ) ) {
 					return "saturate not supported with carry out";
 				}
-				if( !( type == PTXOperand::u32 || type == PTXOperand::s32 ) ) {
+				if( !( type == PTXOperand::u32 || type == PTXOperand::s32 || type == PTXOperand::u64 || type == PTXOperand::s64) ) {
 					return "invalid instruction type " 
 						+ PTXOperand::toString( type );
 				}
@@ -550,7 +550,8 @@ std::string ir::PTXInstruction::valid() const {
 			break;
 		}
 		case AddC: {
-			if( !( type == PTXOperand::u32 || type == PTXOperand::s32 ) ) {
+			if( !( type == PTXOperand::u32 || type == PTXOperand::s32 || 
+				type == PTXOperand::u64 || type == PTXOperand::s64 ) ) {
 				return "invalid instruction type " 
 					+ PTXOperand::toString( type );
 			}
@@ -1882,7 +1883,8 @@ std::string ir::PTXInstruction::valid() const {
 				if( ( modifier & sat ) ) {
 					return "saturate not supported with carry out";
 				}
-				if( !( type == PTXOperand::u32 || type == PTXOperand::s32 ) ) {
+				if( !( type == PTXOperand::u32 || type == PTXOperand::s32 || 
+					type == PTXOperand::u64 || type == PTXOperand::s64 ) ) {
 					return "invalid instruction type " 
 						+ PTXOperand::toString( type );
 				}
@@ -1908,7 +1910,8 @@ std::string ir::PTXInstruction::valid() const {
 			break;
 		}
 		case SubC: {
-			if( !( type == PTXOperand::u32 || type == PTXOperand::s32 ) ) {
+			if( !( type == PTXOperand::u32 || type == PTXOperand::s32 || 
+				type == PTXOperand::u64 || type == PTXOperand::s64 ) ) {
 				return "invalid instruction type " 
 					+ PTXOperand::toString( type );
 			}

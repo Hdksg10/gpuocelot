@@ -79,7 +79,7 @@ declare default i64 @__ocelot_brev_b64( i64  ) align 1;
 declare default i32 @__ocelot_brev_b32( i32  ) align 1;
 
 %Dimension = type { i32, i32, i32 };
-define default void @_Z_ocelotTranslated__Z12test_dp2a_loPiPjS_S_( %LLVMContext* %__ctaContext ) nounwind align 1;
+define default void @_Z_ocelotTranslated__Z16test_shf_r_clampPjS_S_S_( %LLVMContext* %__ctaContext ) nounwind align 1;
 {
 BB_2_2:
 	%rt0 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 7;
@@ -108,22 +108,19 @@ BB_2_2:
 	%r9 = load i32, i32* %rt13, align 4;
 	%rt14 = inttoptr i64 %r5 to i32*;
 	%r10 = load i32, i32* %rt14, align 4;
-	%rt16 = trunc i32 %r9 to i16;
-	%rt15 = bitcast i32 %r8 to < 2 x i16 >;
-	%rt17 = bitcast i16 %rt16 to < 2 x i8 >;
-	%rt18 = zext < 2 x i16 > %rt15 to < 2 x i32 >;
-	%rt19 = sext < 2 x i8 > %rt17 to < 2 x i32 >;
-	%rt20 = mul < 2 x i32 > %rt18, %rt19;
-	%rt21 = extractelement < 2 x i32 > %rt20, i32 0;
-	%rt22 = extractelement < 2 x i32 > %rt20, i32 1;
-	%rt23 = add i32 %rt21, %rt22;
-	%r11 = add i32 %rt23, %r10;
-	%rt24 = inttoptr i64 %r4 to i32*;
-	store i32 %r11, i32* %rt24, align 4;
-	%rt25 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 4;
-	%rt26 = load i8*, i8** %rt25;
-	%rt27 = bitcast i8* %rt26 to i32*;
-	store i32 2, i32* %rt27;
+	%rt15 = icmp ult i32 %r10, 32;
+	%rt16 = select i1 %rt15, i32 %r10, i32 32;
+	%rt17 = sub i32 32, %rt16;
+	%rt18 = shl i32 %r9, %rt17;
+	%rt19 = lshr i32 %r8, %rt16;
+	%rt20 = or i32 %rt19, %rt18;
+	%r11 = select i1 %rt15, i32 %rt20, i32 %r9;
+	%rt21 = inttoptr i64 %r4 to i32*;
+	store i32 %r11, i32* %rt21, align 4;
+	%rt22 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 4;
+	%rt23 = load i8*, i8** %rt22;
+	%rt24 = bitcast i8* %rt23 to i32*;
+	store i32 2, i32* %rt24;
 	br label %BB_2_1;
 BB_2_1:
 	ret void;

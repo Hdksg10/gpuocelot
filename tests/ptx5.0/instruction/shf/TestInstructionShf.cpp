@@ -16,8 +16,6 @@ namespace test {
             description = "A unit test for the SHF instruction.";
         }
     protected:
-
-
         bool doTest() {
             bool result = true;
             _loadConfig();
@@ -39,7 +37,7 @@ int main( int argc, char** argv )
 	parser.parse("-c", test.configPath, "../instruction/shf/config_shr_l_clamp.test", "Test configuration path.");
 	parser.parse( "-i", test.input, "../instruction/shf/test_shf.ptx",
 		"Test PTX path.");
-	parser.parse( "-r", test.recursive, true, 
+	parser.parse( "-r", test.recursive, false, 
 		"Recursively search directories.");
 	parser.parse( "-o", test.output, false,
 		"Print out the internal representation of each parsed file." );

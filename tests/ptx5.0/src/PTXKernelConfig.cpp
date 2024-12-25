@@ -1,6 +1,3 @@
-#ifndef PTXKERNELCONFIG_H
-#define PTXKERNELCONFIG_H
-
 #include <ptx_test/PTXKernelConfig.h>
 #include "hydrazine/json.h"
 
@@ -11,7 +8,9 @@ PTXKernelConfig::PTXKernelConfig() {
     kernelName = "invalid_kernel_name";
 }
 
-PTXKernelConfig::PTXKernelConfig(ir::Dim3 _threads, ir::Dim3 _blocks, std::string _kernelName, const ParamVector& _paramVector, const SizeVector& _sizeVector, int _destinationIdx) : threads(_threads), blocks(_blocks), kernelName(_kernelName), paramVector(_paramVector), sizeVector(_sizeVector), destinationIdx(_destinationIdx) {}
+PTXKernelConfig::PTXKernelConfig(ir::Dim3 _threads, ir::Dim3 _blocks, std::string _kernelName, const ParamVector& _paramVector, const SizeVector& _sizeVector, int _destinationIdx) : threads(_threads), blocks(_blocks), kernelName(_kernelName), paramVector(_paramVector), sizeVector(_sizeVector), destinationIdx(_destinationIdx) {
+    nParams = paramVector.size();
+}
 
 PTXKernelConfig::PTXKernelConfig(std::string path) {
 	hydrazine::json::Parser parser;
@@ -42,7 +41,40 @@ PTXKernelConfig::PTXKernelConfig(std::string path) {
             // paramVector.push_back(stringToDataType(value->as_string()));
             sizeVector.push_back(initialize_dim3(hydrazine::json::Visitor(value)));
         }
+        nParams = paramVector.size();
         
+        // read values from the config file
+        if (main.find("value")) {
+            auto values = static_cast<hydrazine::json::Array *>(main["value"].value);
+
+            for (auto&& valueArray: *values) {
+                if (valueArray->type == hydrazine::json::Array::Type::Array)
+                {   
+                    auto array = valueArray->as_array();
+                    std::vector<Value> paramValues;
+                    for (auto&& _value: array) {
+                        Value value;
+                        // paramValues.push_back(_value->as_string());
+                        value.f64 = _value->as_number();
+                        paramValues.push_back(value);
+                    }
+                    valuesVector.push_back(paramValues);
+                }
+                else if (valueArray->type == hydrazine::json::Array::Type::DenseArray)
+                {
+                    auto array = valueArray->as_dense_array();
+                    std::vector<Value> paramValues;
+                    for (auto&& _value: array) {
+                        // paramValues.push_back(_value->as_string());
+                        // std::cout << _value->as_integer() << std::endl;
+                        Value value;
+                        value.s64 = _value;
+                        paramValues.push_back(value);
+                    }
+                    valuesVector.push_back(paramValues);
+                }
+            }
+        }
 	}
 	catch (hydrazine::Exception exp) {
 		std::cerr << "==Ocelot== WARNING: Could not parse config file '" 
@@ -89,5 +121,3 @@ ir::PTXOperand::DataType PTXKernelConfig::stringToDataType(std::string str) {
         return DataType::TypeSpecifier_invalid;
     }
 }
-#endif /* PTXKERNELCONFIG_H */
-
