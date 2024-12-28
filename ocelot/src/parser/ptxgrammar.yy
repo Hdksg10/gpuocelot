@@ -1211,6 +1211,7 @@ mulModifier : roundHiLoWide optionalFtz optionalSaturate
 
 mulModifier : hiOrLo TOKEN_CARRY
 {
+	state.modifier( $<value>1 );
 	state.carry( true );
 };
 

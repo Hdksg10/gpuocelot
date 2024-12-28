@@ -39,7 +39,7 @@ int main( int argc, char** argv )
 	parser.parse("-c", test.configPath, "../instruction/lop3/config.test", "Test configuration path.");
 	parser.parse( "-i", test.input, "../instruction/lop3/test_lop3.ptx",
 		"Test PTX path.");
-	parser.parse( "-r", test.recursive, true, 
+	parser.parse( "-r", test.recursive, false, 
 		"Recursively search directories.");
 	parser.parse( "-o", test.output, false,
 		"Print out the internal representation of each parsed file." );

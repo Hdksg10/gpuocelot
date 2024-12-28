@@ -24,6 +24,7 @@
 
 // Standard Library Includes
 #include <climits>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include "ocelot/ir/LLVMStatement.h"
@@ -1617,7 +1618,20 @@ void PTXToLLVMTranslator::_translateAddC( const ir::PTXInstruction& i )
 	
 	add.a = add.d;
 	add.d = destination;
-	add.b = _translate( i.c );
+	if ( ir::PTXOperand::u64 == i.type || ir::PTXOperand::s64 == i.type ) {
+		// extend CC.CF to 64 bits
+		ir::LLVMSext extend;
+		
+		extend.d.type.type = ir::LLVMInstruction::I64;
+		extend.d.type.category = ir::LLVMInstruction::Type::Element;
+		extend.d.name = _tempRegister();
+		extend.a = _translate( i.c );
+		add.b = extend.d;
+		_add( extend );
+	}
+	else {
+		add.b = _translate( i.c );
+	}
 	
 	_add( add );
 
@@ -3494,7 +3508,6 @@ void PTXToLLVMTranslator::_translateMad( const ir::PTXInstruction& i )
 		{
 			ir::LLVMMul mul;
 			ir::LLVMAdd add;
-			
 			add.d = _destination( i );
 			
 			mul.d = add.d;
@@ -3508,6 +3521,53 @@ void PTXToLLVMTranslator::_translateMad( const ir::PTXInstruction& i )
 			add.b = mul.d;
 			
 			_add( add );
+			if( i.carry & ir::PTXInstruction::CC )
+			{
+				ir::LLVMInstruction::Operand carry = _translate( i.pq );
+				ir::LLVMInstruction::Operand lessThanA = 
+					ir::LLVMInstruction::Operand( _tempRegister(),
+						ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+						ir::LLVMInstruction::Type::Element ) );
+				ir::LLVMInstruction::Operand lessThanB = 
+					ir::LLVMInstruction::Operand( _tempRegister(),
+						ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+						ir::LLVMInstruction::Type::Element ) );
+				ir::LLVMInstruction::Operand lessThanEither = 
+					ir::LLVMInstruction::Operand( _tempRegister(),
+						ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+						ir::LLVMInstruction::Type::Element ) );
+				
+				ir::LLVMIcmp compare;
+			
+				compare.comparison = ir::LLVMInstruction::Ult;
+				compare.d = lessThanA;
+				compare.a = add.d;
+				compare.b = add.a;
+			
+				_add( compare );
+				
+				compare.d = lessThanB;
+				compare.b = add.b;
+				
+				_add( compare );
+				
+				ir::LLVMOr Or;
+				
+				Or.d = lessThanEither;
+				Or.a = lessThanA;
+				Or.b = lessThanB;
+				
+				_add( Or );
+			
+				ir::LLVMSelect select;
+				
+				select.d = carry;
+				select.condition = lessThanEither;
+				select.a = ir::LLVMInstruction::Operand( (ir::LLVMI32) 1 );
+				select.b = ir::LLVMInstruction::Operand( (ir::LLVMI32) 0 );
+				
+				_add( select );					
+			}
 		}
 		else
 		{
@@ -3530,6 +3590,53 @@ void PTXToLLVMTranslator::_translateMad( const ir::PTXInstruction& i )
 				add.b = _translate( i.c );
 				
 				_add( add );
+				if( i.carry & ir::PTXInstruction::CC )
+				{
+					ir::LLVMInstruction::Operand carry = _translate( i.pq );
+					ir::LLVMInstruction::Operand lessThanA = 
+						ir::LLVMInstruction::Operand( _tempRegister(),
+							ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+							ir::LLVMInstruction::Type::Element ) );
+					ir::LLVMInstruction::Operand lessThanB = 
+						ir::LLVMInstruction::Operand( _tempRegister(),
+							ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+							ir::LLVMInstruction::Type::Element ) );
+					ir::LLVMInstruction::Operand lessThanEither = 
+						ir::LLVMInstruction::Operand( _tempRegister(),
+							ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+							ir::LLVMInstruction::Type::Element ) );
+					
+					ir::LLVMIcmp compare;
+				
+					compare.comparison = ir::LLVMInstruction::Ult;
+					compare.d = lessThanA;
+					compare.a = add.d;
+					compare.b = add.a;
+				
+					_add( compare );
+					
+					compare.d = lessThanB;
+					compare.b = add.b;
+					
+					_add( compare );
+					
+					ir::LLVMOr Or;
+					
+					Or.d = lessThanEither;
+					Or.a = lessThanA;
+					Or.b = lessThanB;
+					
+					_add( Or );
+				
+					ir::LLVMSelect select;
+					
+					select.d = carry;
+					select.condition = lessThanEither;
+					select.a = ir::LLVMInstruction::Operand( (ir::LLVMI32) 1 );
+					select.b = ir::LLVMInstruction::Operand( (ir::LLVMI32) 0 );
+					
+					_add( select );					
+				}
 			}
 			else if( ir::PTXOperand::u64 == i.type )
 			{
@@ -3550,6 +3657,53 @@ void PTXToLLVMTranslator::_translateMad( const ir::PTXInstruction& i )
 				add.b = _translate( i.c );
 				
 				_add( add );
+				if( i.carry & ir::PTXInstruction::CC )
+				{
+					ir::LLVMInstruction::Operand carry = _translate( i.pq );
+					ir::LLVMInstruction::Operand lessThanA = 
+						ir::LLVMInstruction::Operand( _tempRegister(),
+							ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+							ir::LLVMInstruction::Type::Element ) );
+					ir::LLVMInstruction::Operand lessThanB = 
+						ir::LLVMInstruction::Operand( _tempRegister(),
+							ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+							ir::LLVMInstruction::Type::Element ) );
+					ir::LLVMInstruction::Operand lessThanEither = 
+						ir::LLVMInstruction::Operand( _tempRegister(),
+							ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+							ir::LLVMInstruction::Type::Element ) );
+					
+					ir::LLVMIcmp compare;
+				
+					compare.comparison = ir::LLVMInstruction::Ult;
+					compare.d = lessThanA;
+					compare.a = add.d;
+					compare.b = add.a;
+				
+					_add( compare );
+					
+					compare.d = lessThanB;
+					compare.b = add.b;
+					
+					_add( compare );
+					
+					ir::LLVMOr Or;
+					
+					Or.d = lessThanEither;
+					Or.a = lessThanA;
+					Or.b = lessThanB;
+					
+					_add( Or );
+				
+					ir::LLVMSelect select;
+					
+					select.d = carry;
+					select.condition = lessThanEither;
+					select.a = ir::LLVMInstruction::Operand( (ir::LLVMI32) 1 );
+					select.b = ir::LLVMInstruction::Operand( (ir::LLVMI32) 0 );
+					
+					_add( select );					
+				}
 			}
 			else if( i.modifier & ir::PTXInstruction::sat )
 			{
@@ -3801,6 +3955,53 @@ void PTXToLLVMTranslator::_translateMad( const ir::PTXInstruction& i )
 				add.b = _translate( i.c );
 				
 				_add( add );
+				if( i.carry & ir::PTXInstruction::CC )
+				{
+					ir::LLVMInstruction::Operand carry = _translate( i.pq );
+					ir::LLVMInstruction::Operand lessThanA = 
+						ir::LLVMInstruction::Operand( _tempRegister(),
+							ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+							ir::LLVMInstruction::Type::Element ) );
+					ir::LLVMInstruction::Operand lessThanB = 
+						ir::LLVMInstruction::Operand( _tempRegister(),
+							ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+							ir::LLVMInstruction::Type::Element ) );
+					ir::LLVMInstruction::Operand lessThanEither = 
+						ir::LLVMInstruction::Operand( _tempRegister(),
+							ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+							ir::LLVMInstruction::Type::Element ) );
+					
+					ir::LLVMIcmp compare;
+				
+					compare.comparison = ir::LLVMInstruction::Ult;
+					compare.d = lessThanA;
+					compare.a = add.d;
+					compare.b = add.a;
+				
+					_add( compare );
+					
+					compare.d = lessThanB;
+					compare.b = add.b;
+					
+					_add( compare );
+					
+					ir::LLVMOr Or;
+					
+					Or.d = lessThanEither;
+					Or.a = lessThanA;
+					Or.b = lessThanB;
+					
+					_add( Or );
+				
+					ir::LLVMSelect select;
+					
+					select.d = carry;
+					select.condition = lessThanEither;
+					select.a = ir::LLVMInstruction::Operand( (ir::LLVMI32) 1 );
+					select.b = ir::LLVMInstruction::Operand( (ir::LLVMI32) 0 );
+					
+					_add( select );					
+				}
 			}
 		}
 	}

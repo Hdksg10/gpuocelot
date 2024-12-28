@@ -3,13 +3,13 @@
 
 
 namespace test {
-    class TestInstructionDp4a : public TestInstruction {
+    class TestInstructionAddC : public TestInstruction {
     public:
 
-        TestInstructionDp4a() {
-            name = "TestInstructionDp4a";
+        TestInstructionAddC() {
+            name = "TestInstructionAddC";
 
-            description = "A unit test for the DP4A instruction.";
+            description = "A unit test for the ADDC instruction.";
         }
     protected:
 
@@ -29,11 +29,11 @@ namespace test {
 int main( int argc, char** argv )
 {
 	hydrazine::ArgumentParser parser( argc, argv );
-	test::TestInstructionDp4a test;
+	test::TestInstructionAddC test;
 	parser.description( test.testDescription() );
 
-	parser.parse("-c", test.configPath, "../instruction/dp4a/config.test", "Test configuration path.");
-	parser.parse( "-i", test.input, "../instruction/dp4a/test_dp4a.ptx",
+	parser.parse("-c", test.configPath, "../instruction/addc/config.test", "Test configuration path.");
+	parser.parse( "-i", test.input, "../instruction/addc/test_addc.ptx",
 		"Test PTX path.");
 	parser.parse( "-r", test.recursive, false, 
 		"Recursively search directories.");
@@ -42,7 +42,7 @@ int main( int argc, char** argv )
 	parser.parse("-l", "--time-limit", test.timeLimit, 60, 
 		"How many seconds to run tests.");
 	parser.parse( "-s", test.seed, 0,
-		"Set the random seed, 0 implies seed with time." );
+		"Set the random seed, 0 implies seed with time.");
 	parser.parse( "-v", test.verbose, false, "Print out info after the test." );
 	parser.parse();
 	

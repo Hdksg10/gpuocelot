@@ -747,10 +747,10 @@ namespace test {
 				std::cout << "Error when check correcty" << std::endl;
 			}
 			std::cout << "PTX result: ";
-			printArray(d);
+			printArray(d_cuda);
 
 			std::cout << "IR result: ";
-			printArray(d_cuda);
+			printArray(d);
 
 			std::cout << "Argument: " << std::endl;
 			int argIdx = 0;
