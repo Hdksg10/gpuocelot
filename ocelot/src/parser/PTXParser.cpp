@@ -1836,7 +1836,7 @@ namespace parser
 		if( operandVector.size() > index )
 		{
 			if( ( operandVector[ index ].operand.type == ir::PTXOperand::pred
-				&& operandVector.size() > 4 ) || operandVector.size() == 6 )
+				&& operandVector.size() > 4 ) || (operandVector.size() == 6 && operandVector[index].operand.type == ir::PTXOperand::pred ) )
 			{
 				statement.instruction.pq = operandVector[index++].operand;
 			}
@@ -1853,6 +1853,10 @@ namespace parser
 		if( operandVector.size() > index )
 		{
 			statement.instruction.c = operandVector[index++].operand;
+		}
+		if( operandVector.size() > index )
+		{
+			statement.instruction.e = operandVector[index++].operand;
 		}
 
 		_setImmediateTypes();
@@ -2312,9 +2316,9 @@ namespace parser
 						{
 							ir::PTXOperand* operands[] = { &s->instruction.a, 
 								&s->instruction.b, &s->instruction.c, 
-								&s->instruction.d };
+								&s->instruction.d, &s->instruction.e };
 				
-							for( unsigned int i = 0; i < 4; ++i )
+							for( unsigned int i = 0; i < 5; ++i )
 							{
 								ir::PTXOperand& operand = *operands[ i ];
 				

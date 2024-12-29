@@ -1249,6 +1249,7 @@ madCModifier : hiOrLo optionalCarry
 madc : OPCODE_MADC madCModifier dataType operand ',' operand 
 	',' operand ',' operand ';'
 {
+	state.carryIn();
 	state.instruction( $<text>1, $<value>3 );
 };
 

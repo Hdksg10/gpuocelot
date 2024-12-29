@@ -1229,6 +1229,7 @@ void PTXToLLVMTranslator::_translate( const ir::PTXInstruction& i,
 	case ir::PTXInstruction::Lg2:      _translateLg2( i );         break;
 	case ir::PTXInstruction::Mad24:    _translateMad24( i );       break;
 	case ir::PTXInstruction::Mad:      _translateMad( i );         break;
+	case ir::PTXInstruction::MadC:     _translateMadC( i );        break;
 	case ir::PTXInstruction::Max:      _translateMax( i );         break;
 	case ir::PTXInstruction::Membar:   _translateMembar( i );      break;
 	case ir::PTXInstruction::Min:      _translateMin( i );         break;
@@ -1556,7 +1557,6 @@ void PTXToLLVMTranslator::_translateAdd( const ir::PTXInstruction& i )
 				ir::LLVMInstruction::Operand( _tempRegister(),
 					ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
 					ir::LLVMInstruction::Type::Element ) );
-			
 			ir::LLVMIcmp compare;
 		
 			compare.comparison = ir::LLVMInstruction::Ult;
@@ -1615,7 +1615,6 @@ void PTXToLLVMTranslator::_translateAddC( const ir::PTXInstruction& i )
 	add.b = b;
 	
 	_add( add );
-	
 	add.a = add.d;
 	add.d = destination;
 	if ( ir::PTXOperand::u64 == i.type || ir::PTXOperand::s64 == i.type ) {
@@ -4007,6 +4006,455 @@ void PTXToLLVMTranslator::_translateMad( const ir::PTXInstruction& i )
 	}
 }
 
+void PTXToLLVMTranslator::_translateMadC( const ir::PTXInstruction& i ) 
+{
+	auto c = _translate( i.c );
+	if( i.modifier & ir::PTXInstruction::lo )
+	{
+		ir::LLVMMul mul;
+		ir::LLVMAdd add;
+		auto destination = _destination( i );
+		
+		mul.d = destination;
+		mul.d.name = _tempRegister();	
+		mul.a = _translate( i.a );
+		mul.b = _translate( i.b );
+	
+		_add( mul );
+		
+		add.a = c;
+		add.b = mul.d;
+		add.d.name = _tempRegister();
+		add.d.type = add.a.type;
+		
+		_add( add );
+
+		add.a = add.d;
+		add.d = destination;
+
+		if ( ir::PTXOperand::u64 == i.type || ir::PTXOperand::s64 == i.type ) {
+			// extend CC.CF to 64 bits
+			ir::LLVMSext extend;
+			
+			extend.d.type.type = ir::LLVMInstruction::I64;
+			extend.d.type.category = ir::LLVMInstruction::Type::Element;
+			extend.d.name = _tempRegister();
+			extend.a = _translate( i.e );
+			add.b = extend.d;
+			_add( extend );
+		}
+		else {
+			add.b = _translate( i.e );
+		}
+		
+		_add( add );
+		if( i.carry & ir::PTXInstruction::CC )
+		{
+			ir::LLVMInstruction::Operand carry = _translate( i.pq );
+			ir::LLVMInstruction::Operand lessThanA = 
+				ir::LLVMInstruction::Operand( _tempRegister(),
+					ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+					ir::LLVMInstruction::Type::Element ) );
+			ir::LLVMInstruction::Operand lessThanB = 
+				ir::LLVMInstruction::Operand( _tempRegister(),
+					ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+					ir::LLVMInstruction::Type::Element ) );
+			ir::LLVMInstruction::Operand lessThanEither = 
+				ir::LLVMInstruction::Operand( _tempRegister(),
+					ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+					ir::LLVMInstruction::Type::Element ) );
+			
+			ir::LLVMIcmp compare;
+		
+			compare.comparison = ir::LLVMInstruction::Ult;
+			compare.d = lessThanA;
+			compare.a = destination;
+			compare.b = mul.d;
+		
+			_add( compare );
+			
+			compare.d = lessThanB;
+			compare.b = c;
+			
+			_add( compare );
+			
+			ir::LLVMOr Or;
+			
+			Or.d = lessThanEither;
+			Or.a = lessThanA;
+			Or.b = lessThanB;
+			
+			_add( Or );
+		
+			ir::LLVMSelect select;
+			
+			select.d = carry;
+			select.condition = lessThanEither;
+			select.a = ir::LLVMInstruction::Operand( (ir::LLVMI32) 1 );
+			select.b = ir::LLVMInstruction::Operand( (ir::LLVMI32) 0 );
+			
+			_add( select );					
+		}
+	}
+	else
+	{
+		if( ir::PTXOperand::s64 == i.type )
+		{
+			ir::LLVMCall call;
+			ir::LLVMAdd add;
+			
+			call.name = "@__ocelot_mul_hi_s64";
+			auto destination = _destination( i );
+			call.d = destination;
+			call.d.name = _tempRegister();
+			call.parameters.push_back( _translate( i.a ) );
+			call.parameters.push_back( _translate( i.b ) );
+			
+			_add( call );
+			
+			add.a = call.d;
+			add.b = c;
+			add.d.name = _tempRegister();
+			add.d.type = add.a.type;
+			_add( add );
+			add.a = add.d;
+			add.d = destination;
+
+			// extend CC.CF to 64 bits
+			ir::LLVMSext extend;
+			
+			extend.d.type.type = ir::LLVMInstruction::I64;
+			extend.d.type.category = ir::LLVMInstruction::Type::Element;
+			extend.d.name = _tempRegister();
+			extend.a = _translate( i.e );
+			add.b = extend.d;
+			_add( extend );
+			
+			_add( add );
+			if( i.carry & ir::PTXInstruction::CC )
+			{
+				ir::LLVMInstruction::Operand carry = _translate( i.pq );
+				ir::LLVMInstruction::Operand lessThanA = 
+					ir::LLVMInstruction::Operand( _tempRegister(),
+						ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+						ir::LLVMInstruction::Type::Element ) );
+				ir::LLVMInstruction::Operand lessThanB = 
+					ir::LLVMInstruction::Operand( _tempRegister(),
+						ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+						ir::LLVMInstruction::Type::Element ) );
+				ir::LLVMInstruction::Operand lessThanEither = 
+					ir::LLVMInstruction::Operand( _tempRegister(),
+						ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+						ir::LLVMInstruction::Type::Element ) );
+				
+				ir::LLVMIcmp compare;
+			
+				compare.comparison = ir::LLVMInstruction::Ult;
+				compare.d = lessThanA;
+				compare.a = destination;
+				compare.b = call.d;
+			
+				_add( compare );
+				
+				compare.d = lessThanB;
+				compare.b = c;
+				
+				_add( compare );
+				
+				ir::LLVMOr Or;
+				
+				Or.d = lessThanEither;
+				Or.a = lessThanA;
+				Or.b = lessThanB;
+				
+				_add( Or );
+			
+				ir::LLVMSelect select;
+				
+				select.d = carry;
+				select.condition = lessThanEither;
+				select.a = ir::LLVMInstruction::Operand( (ir::LLVMI32) 1 );
+				select.b = ir::LLVMInstruction::Operand( (ir::LLVMI32) 0 );
+				
+				_add( select );					
+			}
+		}
+		else if( ir::PTXOperand::u64 == i.type )
+		{
+			ir::LLVMCall call;
+			ir::LLVMAdd add;
+			
+			call.name = "@__ocelot_mul_hi_u64";
+			auto destination = _destination( i );
+			call.d = destination;
+			call.d.name = _tempRegister();
+			call.parameters.push_back( _translate( i.a ) );
+			call.parameters.push_back( _translate( i.b ) );
+			
+			_add( call );
+			
+			add.a = call.d;
+			add.b = c;
+			add.d.name = _tempRegister();
+			add.d.type = add.a.type;
+			_add( add );
+
+			add.a = add.d;
+			add.d = destination;
+
+			// extend CC.CF to 64 bits
+			ir::LLVMSext extend;
+			
+			extend.d.type.type = ir::LLVMInstruction::I64;
+			extend.d.type.category = ir::LLVMInstruction::Type::Element;
+			extend.d.name = _tempRegister();
+			extend.a = _translate( i.e );
+			add.b = extend.d;
+			_add( extend );
+			
+			_add( add );
+			if( i.carry & ir::PTXInstruction::CC )
+			{
+				ir::LLVMInstruction::Operand carry = _translate( i.pq );
+				ir::LLVMInstruction::Operand lessThanA = 
+					ir::LLVMInstruction::Operand( _tempRegister(),
+						ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+						ir::LLVMInstruction::Type::Element ) );
+				ir::LLVMInstruction::Operand lessThanB = 
+					ir::LLVMInstruction::Operand( _tempRegister(),
+						ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+						ir::LLVMInstruction::Type::Element ) );
+				ir::LLVMInstruction::Operand lessThanEither = 
+					ir::LLVMInstruction::Operand( _tempRegister(),
+						ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+						ir::LLVMInstruction::Type::Element ) );
+				
+				ir::LLVMIcmp compare;
+			
+				compare.comparison = ir::LLVMInstruction::Ult;
+				compare.d = lessThanA;
+				compare.a = destination;
+				compare.b = call.d;
+			
+				_add( compare );
+				
+				compare.d = lessThanB;
+				compare.b = c;
+				
+				_add( compare );
+				
+				ir::LLVMOr Or;
+				
+				Or.d = lessThanEither;
+				Or.a = lessThanA;
+				Or.b = lessThanB;
+				
+				_add( Or );
+			
+				ir::LLVMSelect select;
+				
+				select.d = carry;
+				select.condition = lessThanEither;
+				select.a = ir::LLVMInstruction::Operand( (ir::LLVMI32) 1 );
+				select.b = ir::LLVMInstruction::Operand( (ir::LLVMI32) 0 );
+				
+				_add( select );					
+			}
+		}
+		else
+		{
+			ir::LLVMInstruction::Operand 
+				destination = _destination( i );
+			ir::LLVMInstruction::Operand extendedA = _translate( i.a );
+			ir::LLVMInstruction::Operand extendedB = _translate( i.b );
+		
+			if( ir::PTXOperand::isSigned( i.a.type ) )
+			{
+				if( i.a.addressMode != ir::PTXOperand::Immediate )
+				{
+					ir::LLVMSext sextA;
+			
+					sextA.a = extendedA;
+					_doubleWidth( extendedA.type.type );
+					extendedA.name = _tempRegister();
+					sextA.d = extendedA;
+			
+					_add( sextA );
+				}
+				else
+				{
+					_doubleWidth( extendedA.type.type );
+				}
+			
+				if( i.b.addressMode != ir::PTXOperand::Immediate )
+				{
+					ir::LLVMSext sextB;
+			
+					sextB.a = extendedB;
+					_doubleWidth( extendedB.type.type );
+					extendedB.name = _tempRegister();
+					sextB.d = extendedB;
+			
+					_add( sextB );
+				}
+				else
+				{
+					_doubleWidth( extendedB.type.type );
+				}
+			
+			}
+			else
+			{
+				if( i.a.addressMode != ir::PTXOperand::Immediate )
+				{
+					ir::LLVMZext sextA;
+			
+					sextA.a = extendedA;
+					_doubleWidth( extendedA.type.type );
+					extendedA.name = _tempRegister();
+					sextA.d = extendedA;
+			
+					_add( sextA );
+
+				}
+				else
+				{
+					_doubleWidth( extendedA.type.type );
+				}
+			
+				if( i.b.addressMode != ir::PTXOperand::Immediate )
+				{
+					ir::LLVMZext sextB;
+			
+					sextB.a = extendedB;
+					_doubleWidth( extendedB.type.type );
+					extendedB.name = _tempRegister();
+					sextB.d = extendedB;
+			
+					_add( sextB );
+				}
+				else
+				{
+					_doubleWidth( extendedB.type.type );
+				}
+			}
+		
+			ir::LLVMMul mul;
+				
+			mul.d = extendedA;
+			mul.d.name = _tempRegister();
+			mul.a = extendedA;
+			mul.b = extendedB;
+	
+			_add( mul );
+		
+			ir::LLVMInstruction::Operand 
+				shiftedDestination = destination;
+			shiftedDestination.name = _tempRegister();
+			_doubleWidth( shiftedDestination.type.type );
+		
+			if( ir::PTXOperand::isSigned( i.a.type ) )
+			{
+				ir::LLVMAshr shift;
+			
+				shift.d = shiftedDestination;
+				shift.a = mul.d;
+				shift.b.constant = true;
+				shift.b.type.category = 
+					ir::LLVMInstruction::Type::Element;
+				shift.b.type.type = ir::LLVMInstruction::I32;
+				shift.b.i32 = ir::PTXOperand::bytes( i.a.type ) * 8;
+			
+				_add( shift );
+			}
+			else
+			{
+				ir::LLVMLshr shift;
+			
+				shift.d = shiftedDestination;
+				shift.a = mul.d;
+				shift.b.constant = true;
+				shift.b.type.category = 
+					ir::LLVMInstruction::Type::Element;
+				shift.b.type.type = ir::LLVMInstruction::I32;
+				shift.b.i32 = ir::PTXOperand::bytes( i.a.type ) * 8;
+			
+				_add( shift );
+			}
+		
+			ir::LLVMTrunc truncate;
+		
+			truncate.d = destination;
+			truncate.d.name = _tempRegister();
+			truncate.a = shiftedDestination;
+			
+			_add( truncate );
+			
+			ir::LLVMAdd add;
+			
+			add.a = truncate.d;
+			add.b = c;
+			add.d.name = _tempRegister();
+			add.d.type = add.a.type;
+			
+			_add( add );
+
+			add.a = add.d;
+			add.b = _translate( i.e );
+			add.d = destination;
+			_add( add );
+			if( i.carry & ir::PTXInstruction::CC )
+			{
+				ir::LLVMInstruction::Operand carry = _translate( i.pq );
+				ir::LLVMInstruction::Operand lessThanA = 
+					ir::LLVMInstruction::Operand( _tempRegister(),
+						ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+						ir::LLVMInstruction::Type::Element ) );
+				ir::LLVMInstruction::Operand lessThanB = 
+					ir::LLVMInstruction::Operand( _tempRegister(),
+						ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+						ir::LLVMInstruction::Type::Element ) );
+				ir::LLVMInstruction::Operand lessThanEither = 
+					ir::LLVMInstruction::Operand( _tempRegister(),
+						ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+						ir::LLVMInstruction::Type::Element ) );
+				
+				ir::LLVMIcmp compare;
+			
+				compare.comparison = ir::LLVMInstruction::Ult;
+				compare.d = lessThanA;
+				compare.a = destination;
+				compare.b = truncate.d;
+		
+				_add( compare );
+				
+				compare.d = lessThanB;
+				compare.b = c;
+				
+				_add( compare );
+				
+				ir::LLVMOr Or;
+				
+				Or.d = lessThanEither;
+				Or.a = lessThanA;
+				Or.b = lessThanB;
+				
+				_add( Or );
+			
+				ir::LLVMSelect select;
+				
+				select.d = carry;
+				select.condition = lessThanEither;
+				select.a = ir::LLVMInstruction::Operand( (ir::LLVMI32) 1 );
+				select.b = ir::LLVMInstruction::Operand( (ir::LLVMI32) 0 );
+				
+				_add( select );					
+			}
+		}
+	}
+
+}
+
 void PTXToLLVMTranslator::_translateMax( const ir::PTXInstruction& i )
 {
 	ir::LLVMInstruction::Operand destination = _destination( i );
@@ -6244,7 +6692,12 @@ void PTXToLLVMTranslator::_translateSub( const ir::PTXInstruction& i )
 			
 			negate.d = ir::LLVMInstruction::Operand(
 				_tempRegister(), b.type );
-			negate.a = ir::LLVMInstruction::Operand( (ir::LLVMI32) 0 );
+			if ( ir::PTXOperand::u64 == i.type || ir::PTXOperand::s64 == i.type ) {
+				negate.a = ir::LLVMInstruction::Operand( (ir::LLVMI64) 0 );
+			}
+			else {
+				negate.a = ir::LLVMInstruction::Operand( (ir::LLVMI32) 0 );
+			}
 			negate.b = b;
 			
 			_add( negate );
@@ -6324,7 +6777,12 @@ void PTXToLLVMTranslator::_translateSubC( const ir::PTXInstruction& i )
 	ir::LLVMSub negate;
 	
 	negate.d = ir::LLVMInstruction::Operand(_tempRegister(), b.type );
-	negate.a = ir::LLVMInstruction::Operand( (ir::LLVMI32) 0 );
+	if ( ir::PTXOperand::u64 == i.type || ir::PTXOperand::s64 == i.type ) {
+		negate.a = ir::LLVMInstruction::Operand( (ir::LLVMI64) 0 );
+	}
+	else {
+		negate.a = ir::LLVMInstruction::Operand( (ir::LLVMI32) 0 );
+	}
 	negate.b = b;
 	
 	_add( negate );
@@ -6341,15 +6799,33 @@ void PTXToLLVMTranslator::_translateSubC( const ir::PTXInstruction& i )
 	add.a = add.d;
 	add.d = destination;
 	add.d.name = _tempRegister();
-	add.b = _translate( i.c );
-	
+	if ( ir::PTXOperand::u64 == i.type || ir::PTXOperand::s64 == i.type ) {
+		// extend CC.CF to 64 bits
+		ir::LLVMSext extend;
+		
+		extend.d.type.type = ir::LLVMInstruction::I64;
+		extend.d.type.category = ir::LLVMInstruction::Type::Element;
+		extend.d.name = _tempRegister();
+		extend.a = _translate( i.c );
+		add.b = extend.d;
+		_add( extend );
+	}
+	else {
+		add.b = _translate( i.c );
+	}
+
 	_add( add );
 
 	ir::LLVMSub sub;
 
 	sub.d = destination;
 	sub.a = add.d;
-	sub.b = ir::LLVMInstruction::Operand( (ir::LLVMI32) 1 );
+	if ( ir::PTXOperand::u64 == i.type || ir::PTXOperand::s64 == i.type ) {
+		sub.b = ir::LLVMInstruction::Operand( (ir::LLVMI64) 1 );
+	}
+	else {
+		sub.b = ir::LLVMInstruction::Operand( (ir::LLVMI32) 1 );
+	}
 
 	_add( sub );
 

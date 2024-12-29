@@ -461,8 +461,9 @@ bool ir::PTXInstruction::isPt( const PTXOperand& op )
 }
 
 ir::PTXInstruction::PTXInstruction( Opcode op, const PTXOperand& _d, 
-	const PTXOperand& _a, const PTXOperand& _b, const PTXOperand& _c ) 
-	: opcode(op), d(_d), a(_a), b(_b), c(_c) {
+	const PTXOperand& _a, const PTXOperand& _b, const PTXOperand& _c,
+	const PTXOperand& _e ) 
+	: opcode(op), d(_d), a(_a), b(_b), c(_c), e(_e) {
 	ISA = Instruction::PTX;
 	type = PTXOperand::s32;
 	modifier = 0;
@@ -1107,7 +1108,7 @@ std::string ir::PTXInstruction::valid() const {
 			break;
 		}
 		case MadC: {
-			if( !( type == PTXOperand::u32 || type == PTXOperand::s32 ) ) {
+			if( !( type == PTXOperand::u32 || type == PTXOperand::s32 || type == PTXOperand::u64 || type == PTXOperand::s64) ) {
 				return "invalid instruction type " 
 					+ PTXOperand::toString( type );
 			}

@@ -178,9 +178,9 @@ PTXKernel::RegisterVector PTXKernel::getReferencedRegisters() const
 				const ir::PTXInstruction&>(**instruction);
 			
 			const ir::PTXOperand* operands[] = {&ptx.pq, &ptx.d, &ptx.a, &ptx.b,
-				&ptx.c, &ptx.pg};
+				&ptx.c, &ptx.pg, &ptx.e};
 
-			for( unsigned int i = 0; i < 6; ++i )
+			for( unsigned int i = 0; i < 7; ++i )
 			{
 				const ir::PTXOperand& d = *operands[i];
 				if( d.addressMode != ir::PTXOperand::Register &&
@@ -452,12 +452,12 @@ PTXKernel::RegisterMap PTXKernel::assignRegisters( ControlFlowGraph& cfg )
 				*instruction);
 			PTXOperand PTXInstruction:: * operands[] = 
 			{ &PTXInstruction::a, &PTXInstruction::b, &PTXInstruction::c, 
-				&PTXInstruction::d, &PTXInstruction::pg, 
+				&PTXInstruction::d, &PTXInstruction::e, &PTXInstruction::pg, 
 				&PTXInstruction::pq };
 	
 			report( " For instruction '" << instr.toString() << "'" );
 	
-			for (int i = 0; i < 6; i++) {
+			for (int i = 0; i < 7; i++) {
 				if ((instr.*operands[i]).addressMode 
 					== PTXOperand::Invalid) {
 					continue;

@@ -181,6 +181,7 @@ protected:
 		const analysis::DataflowGraph::Block& block );
 	void _translateDp4a( const ir::PTXInstruction& i );
 	void _translateDp2a( const ir::PTXInstruction& i );
+	void _translateMadC( const ir::PTXInstruction& i );
 
 protected:
 	void _bitcast( const ir::PTXInstruction& i );

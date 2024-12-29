@@ -383,7 +383,8 @@ namespace ir {
 		PTXInstruction( Opcode op = Nop, const PTXOperand& d = PTXOperand(), 
 			const PTXOperand& a = PTXOperand(), 
 			const PTXOperand& b = PTXOperand(), 
-			const PTXOperand& c = PTXOperand() );
+			const PTXOperand& c = PTXOperand(),
+			const PTXOperand& e = PTXOperand() );
 		~PTXInstruction();
 
 		bool operator==( const PTXInstruction& ) const;
@@ -565,6 +566,11 @@ namespace ir {
 
 		/*! Source operand c */
 		PTXOperand c;
+
+		/* 	Source operand e 
+			Note: this is only for CC.CF register in madc
+		*/
+		PTXOperand e;
 
 		/*  Runtime annotations 
 			

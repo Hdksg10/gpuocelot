@@ -100,7 +100,7 @@ DataflowGraph::Instruction DataflowGraph::convert( ir::PTXInstruction& i )
 	reportE( REPORT_CONVERT, " Converting instruction \"" 
 		<< i.toString() << "\"" );
 
-	ir::PTXOperand ir::PTXInstruction::* sources[ 5 ] 
+	ir::PTXOperand ir::PTXInstruction::* sources[ 6 ] 
 		= { &ir::PTXInstruction::pg, &ir::PTXInstruction::a, 
 		&ir::PTXInstruction::b, &ir::PTXInstruction::c, 
 		&ir::PTXInstruction::d };
@@ -115,6 +115,12 @@ DataflowGraph::Instruction DataflowGraph::convert( ir::PTXInstruction& i )
 	{
 		limit = 5;
 		sources[ 4 ] = &ir::PTXInstruction::pq;
+	}
+
+	else if ( ir::PTXInstruction::MadC == i.opcode )
+	{
+		limit = 5;
+		sources[ 4 ] = &ir::PTXInstruction::e;
 	}
 
 	for( unsigned int j = 0; j < limit; ++j )

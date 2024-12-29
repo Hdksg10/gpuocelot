@@ -1,0 +1,22 @@
+{
+    "kernel": "_Z16test_madc_lo_u64Pm",
+    "threads" : {
+        "x" : 1,
+        "y" : 1,
+        "z" : 1
+    },
+    "blocks" : {
+        "x" : 1,
+        "y" : 1,
+        "z" : 1
+    },
+    "params" : ["u64"],
+    "dest": 0,
+    "size" : [
+        {
+            "x" : 1,
+            "y" : 1,
+            "z" : 1
+        }
+    ]
+}
