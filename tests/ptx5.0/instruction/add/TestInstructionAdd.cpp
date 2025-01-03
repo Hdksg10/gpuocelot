@@ -32,8 +32,8 @@ int main( int argc, char** argv )
 	test::TestInstructionAddC test;
 	parser.description( test.testDescription() );
 
-	parser.parse("-c", test.configPath, "../instruction/add/config.test", "Test configuration path.");
-	parser.parse( "-i", test.input, "../instruction/add/test_addcc.ptx",
+	parser.parse("-c", test.configPath, "../instruction/add/config_f16.test", "Test configuration path.");
+	parser.parse( "-i", test.input, "../instruction/add/test_add.ptx",
 		"Test PTX path.");
 	parser.parse( "-r", test.recursive, false, 
 		"Recursively search directories.");

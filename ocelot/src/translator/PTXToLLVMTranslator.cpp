@@ -143,6 +143,11 @@ ir::LLVMInstruction::DataType PTXToLLVMTranslator::_translate(
 			return ir::LLVMInstruction::I64;
 			break;
 		}
+		case ir::PTXOperand::f16:
+		{
+			return ir::LLVMInstruction::F16;
+			break;
+		}
 		case ir::PTXOperand::f32:
 		{
 			return ir::LLVMInstruction::F32;
@@ -1411,44 +1416,90 @@ void PTXToLLVMTranslator::_translateAdd( const ir::PTXInstruction& i )
 {
 	if( ir::PTXOperand::isFloat( i.type ) )
 	{
-		ir::LLVMFadd add;
-		
-		ir::LLVMInstruction::Operand result = _destination( i );
-
-		add.a = _translate( i.a );
-		add.b = _translate( i.b );
-
-		if( i.modifier & ir::PTXInstruction::sat
-			|| i.modifier & ir::PTXInstruction::ftz )
-		{
-			add.d = add.a;
-			add.d.name = _tempRegister();
+		if ( ir::PTXOperand::f16x2 == i.type) {
+			
 		}
-		else
-		{
-			add.d = result;
-		}
-	
-		_add( add );	
-		
-		if( i.modifier & ir::PTXInstruction::sat )
-		{
-			if( i.modifier & ir::PTXInstruction::ftz )
+		// else if (ir::PTXOperand::f16 == i.type) {
+		// 	ir::LLVMCall tof16;
+		// 	ir::LLVMCall fromf16;
+		// }
+		else {
+			ir::LLVMFadd add;
+			
+			ir::LLVMInstruction::Operand result = _destination( i );
+			
+			add.a = _translate( i.a );
+			add.b = _translate( i.b );
+
+			if( i.modifier & ir::PTXInstruction::sat
+				|| i.modifier & ir::PTXInstruction::ftz )
 			{
-				ir::LLVMInstruction::Operand temp =
-					ir::LLVMInstruction::Operand( _tempRegister(),
-					add.d.type );
-				_saturate( temp, add.d );
-				_flushToZero( result, temp );
+				add.d = add.a;
+				add.d.name = _tempRegister();
 			}
 			else
 			{
-				_saturate( result, add.d );
+				add.d = result;
 			}
-		}
-		else if( i.modifier & ir::PTXInstruction::ftz )
-		{
-			_flushToZero( result, add.d );
+			if ( ir::PTXOperand::f16 == i.type) {
+				// add.a.type.type = ir::LLVMInstruction::DataType::F16;
+				// add.b.type.type = ir::LLVMInstruction::DataType::F16;
+				std::cout << i.a.type << std::endl;
+				// PTX allows implicitly u16 to f16 bitcast
+				if ( (ir::LLVMInstruction::DataType::F16 != add.a.type.type) ||
+				(ir::LLVMInstruction::DataType::F16 != add.b.type.type) ) {
+					ir::LLVMBitcast cast;
+					if ( ir::LLVMInstruction::DataType::F16 != add.a.type.type ) {
+						cast.a = add.a;
+						cast.d = add.a;
+						cast.d.name = _tempRegister();
+						cast.d.type = add.a.type;
+						cast.d.type.type = ir::LLVMInstruction::DataType::F16;
+						_add( cast );
+						add.a = cast.d;
+					}
+					if ( ir::LLVMInstruction::DataType::F16 != add.b.type.type ) {
+						cast.a = add.b;
+						cast.d = add.b;
+						cast.d.name = _tempRegister();
+						cast.d.type = add.b.type;
+						cast.d.type.type = ir::LLVMInstruction::DataType::F16;
+						_add( cast );
+						add.b = cast.d;
+					}
+				}
+				add.d.name = _tempRegister();
+				add.d.type.type = ir::LLVMInstruction::DataType::F16;
+
+			}
+			_add( add );
+			
+			if( i.modifier & ir::PTXInstruction::sat )
+			{
+				if( i.modifier & ir::PTXInstruction::ftz )
+				{
+					ir::LLVMInstruction::Operand temp =
+						ir::LLVMInstruction::Operand( _tempRegister(),
+						add.d.type );
+					_saturate( temp, add.d );
+					_flushToZero( result, temp );
+				}
+				else
+				{
+					_saturate( result, add.d );
+				}
+			}
+			else if( i.modifier & ir::PTXInstruction::ftz )
+			{
+				_flushToZero( result, add.d );
+			}
+
+			if (ir::PTXOperand::f16 == i.type) {
+				ir::LLVMBitcast cast;
+				cast.a = add.d;
+				cast.d = result;
+				_add( cast );
+			}
 		}
 	}
 	else
@@ -10501,6 +10552,39 @@ void PTXToLLVMTranslator::_addLLVMIntrinsics()
  
  	_llvmKernel->push_front( pow );	
 
+	// @llvm.convert.from.fp16.f32
+	ir::LLVMStatement cvt_from_fp16_f32( ir::LLVMStatement::FunctionDeclaration );
+
+	cvt_from_fp16_f32.label      = "llvm.convert.from.fp16.f32";
+	cvt_from_fp16_f32.linkage    = ir::LLVMStatement::InvalidLinkage;
+	cvt_from_fp16_f32.convention = ir::LLVMInstruction::DefaultCallingConvention;
+	cvt_from_fp16_f32.visibility = ir::LLVMStatement::Default;
+
+	cvt_from_fp16_f32.operand.type.category = ir::LLVMInstruction::Type::Element;
+	cvt_from_fp16_f32.operand.type.type = ir::LLVMInstruction::F32;
+
+	cvt_from_fp16_f32.parameters.resize( 1 );
+	cvt_from_fp16_f32.parameters[0].type.category = ir::LLVMInstruction::Type::Element;
+	cvt_from_fp16_f32.parameters[0].type.type     = ir::LLVMInstruction::I16;
+
+	_llvmKernel->push_front( cvt_from_fp16_f32 );
+
+	// @llvm.convert.to.fp16.f32
+	ir::LLVMStatement cvt_to_fp16_f32( ir::LLVMStatement::FunctionDeclaration );
+
+	cvt_to_fp16_f32.label      = "llvm.convert.to.fp16.f32";
+	cvt_to_fp16_f32.linkage    = ir::LLVMStatement::InvalidLinkage;
+	cvt_to_fp16_f32.convention = ir::LLVMInstruction::DefaultCallingConvention;
+	cvt_to_fp16_f32.visibility = ir::LLVMStatement::Default;
+
+	cvt_to_fp16_f32.operand.type.category = ir::LLVMInstruction::Type::Element;
+	cvt_to_fp16_f32.operand.type.type = ir::LLVMInstruction::I16;
+
+	cvt_to_fp16_f32.parameters.resize( 1 );
+	cvt_to_fp16_f32.parameters[0].type.category = ir::LLVMInstruction::Type::Element;
+	cvt_to_fp16_f32.parameters[0].type.type     = ir::LLVMInstruction::F32;
+
+	_llvmKernel->push_front( cvt_to_fp16_f32 );
 }
 
 void PTXToLLVMTranslator::_addUtilityCalls()

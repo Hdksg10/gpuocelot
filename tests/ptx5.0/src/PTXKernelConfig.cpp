@@ -106,6 +106,7 @@ ir::PTXOperand::DataType PTXKernelConfig::stringToDataType(std::string str) {
         {"u32", DataType::u32},
         {"u64", DataType::u64},
         {"f16", DataType::f16},
+        {"f16x2", DataType::f16x2},
         {"f32", DataType::f32},
         {"f64", DataType::f64},
         {"b8", DataType::b8},

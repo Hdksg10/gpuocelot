@@ -25,6 +25,7 @@ namespace ir {
 	typedef int32_t PTXS32;
 	typedef int64_t PTXS64;
 	
+	typedef PTXU16 PTXF16;
 	typedef float PTXF32;
 	typedef float PTXF16X2;
 	typedef double PTXF64;

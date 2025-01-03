@@ -6,6 +6,7 @@
 #include <boost/filesystem.hpp>
 #include <cmath>
 #include "ocelot/ir/PTXOperand.h"
+#include "ptx_test/half.hpp"
 
 #ifdef REPORT_BASE
 #undef REPORT_BASE
@@ -69,9 +70,29 @@ namespace test {
 		returnAray = false;
 		type = ir::PTXOperand::DataType::u64;
 	}
+
+	TestInstruction::ArrayWithSize::ArrayWithSize(half* p, size_t bsz, ir::Dim3 _dim3) {
+		array.p_f16 = p;
+		bytesize = bsz;
+		dim3 = _dim3;
+		returnAray = false;
+		type = ir::PTXOperand::DataType::f16;
+	}
 	
+	TestInstruction::ArrayWithSize::ArrayWithSize(fp16x2_t* p, size_t bsz, ir::Dim3 _dim3) {
+		array.p_f16x2 = p;
+		bytesize = bsz;
+		dim3 = _dim3;
+		returnAray = false;
+		type = ir::PTXOperand::DataType::f16x2;
+	}
+
 	void* TestInstruction::ArrayWithSize::getPointer(const ArrayWithSize &arr) {
 		switch (arr.type) {
+			case ir::PTXOperand::DataType::f16:
+				return static_cast<void*>(arr.array.p_f16);
+			case ir::PTXOperand::DataType::f16x2:
+				return static_cast<void*>(arr.array.p_f16x2);
             case ir::PTXOperand::DataType::f32:
                 return static_cast<void*>(arr.array.p_f32);
             case ir::PTXOperand::DataType::f64:
@@ -97,6 +118,27 @@ namespace test {
 		}
 
 		switch (type) {
+			case ir::PTXOperand::DataType::f16: {
+				bool equal = true;
+				for (size_t i = 0; i < bytesize / sizeof(half); i++) {
+					if (fabs(this->array.p_f16[i] - other.array.p_f16[i]) > THERESHOLD) {
+						equal = false;
+						break;
+					}
+				}
+				return equal;
+			}
+			case ir::PTXOperand::DataType::f16x2: {
+				bool equal = true;
+				for (size_t i = 0; i < bytesize / sizeof(fp16x2_t); i++) {
+					bool result = (fabs(this->array.p_f16x2[i].x - other.array.p_f16x2[i].x) < THERESHOLD) && (fabs(this->array.p_f16x2[i].y - other.array.p_f16x2[i].y) < THERESHOLD);
+					if (!result) {
+						equal = false;
+						break;
+					}
+				}
+				return equal;
+			}
 			case ir::PTXOperand::DataType::f32: {
 				bool equal = true;
 				for (size_t i = 0; i < bytesize / sizeof(float); i++) {
@@ -186,6 +228,14 @@ namespace test {
 			boost::random::uniform_real_distribution<T> dist(-100.0, 100.0); 
         	return dist(random);	
 		}
+		else if constexpr (std::is_same_v<T, half>) {
+			boost::random::uniform_real_distribution<float> dist(-100.0f, 100.0f);
+			return __half(dist(random));
+		}
+		else if constexpr (std::is_same_v<T, fp16x2_t>) {
+			boost::random::uniform_real_distribution<float> dist(-100.0f, 100.0f);
+			return fp16x2_t(__half(dist(random)), __half(dist(random)));
+		}
 		else {
 			// Unsupported 
 			static_assert(std::is_same_v<T, void>, "Unsupported type for _random");
@@ -211,6 +261,16 @@ namespace test {
 		newArray.returnAray = array.returnAray;
 		size_t bytesize = newArray.bytesize;
 		switch (array.type) {
+			case ir::PTXOperand::DataType::f16: {
+				newArray.array.p_f16 = new half[bytesize / sizeof(half)];
+				std::memcpy(newArray.array.p_f16, array.array.p_f16, bytesize);
+				break;
+			}
+			case ir::PTXOperand::DataType::f16x2: {
+				newArray.array.p_f16x2 = new fp16x2_t[bytesize / sizeof(fp16x2_t)];
+				std::memcpy(newArray.array.p_f16x2, array.array.p_f16x2, bytesize);
+				break;
+			}
 			case ir::PTXOperand::DataType::f32: {
 				newArray.array.p_f32 = new float[bytesize / sizeof(float)];
 				std::memcpy(newArray.array.p_f32, array.array.p_f32, bytesize);
@@ -256,6 +316,18 @@ namespace test {
 		size_t size = dim.size();
 		size_t bytesize;
 		switch (type) {
+			case ir::PTXOperand::DataType::f16:
+			{
+				bytesize = size * sizeof(half);
+				half* p = new half[size];
+				if (random) _randomArray(p, size);
+				else memset(p, 0, bytesize);
+				return ArrayWithSize(p, bytesize, dim);
+			}
+			case ir::PTXOperand::DataType::f16x2:
+			{
+				
+			}
 			case ir::PTXOperand::DataType::f64:
 			{
 				bytesize = size * sizeof(double);
@@ -343,6 +415,20 @@ namespace test {
 				}
 				return array;
 			}
+			case ir::PTXOperand::DataType::f16: {
+				auto array = _allocArray(ir::PTXOperand::DataType::f16, ir::Dim3(values.size()), false);
+				for (size_t i = 0; i < values.size(); ++i) {
+					array.array.p_f16[i] = values[i].f16;
+				}
+				return array;
+			}
+			case ir::PTXOperand::DataType::f16x2: {
+				auto array = _allocArray(ir::PTXOperand::DataType::f16x2, ir::Dim3(values.size()), false);
+				for (size_t i = 0; i < values.size(); ++i) {
+					array.array.p_f16x2[i] = values[i].f16x2;
+				}
+				return array;
+			}
 			case ir::PTXOperand::DataType::f32: {
 				auto array = _allocArray(ir::PTXOperand::DataType::f32, ir::Dim3(values.size()), false);
 				for (size_t i = 0; i < values.size(); ++i) {
@@ -386,6 +472,18 @@ namespace test {
 			case ir::PTXOperand::DataType::u64: {
 				for (size_t i = 0; i < values.size(); ++i) {
 					array.array.p_u64[i] = values[i].u64;
+				}
+				break;
+			}
+			case ir::PTXOperand::DataType::f16: {
+				for (size_t i = 0; i < values.size(); ++i) {
+					array.array.p_f16[i] = values[i].f16;
+				}
+				break;
+			}
+			case ir::PTXOperand::DataType::f16x2: {
+				for (size_t i = 0; i < values.size(); ++i) {
+					array.array.p_f16x2[i] = values[i].f16x2;
 				}
 				break;
 			}
@@ -437,6 +535,20 @@ namespace test {
 				std::cout << std::endl;
 				break;
 			}
+			case ir::PTXOperand::DataType::f16: {
+				for (size_t i = 0; i < array.dim3.size(); ++i) {
+					std::cout << array.array.p_f16[i] << " ";
+				}
+				std::cout << std::endl;
+				break;
+			}
+			case ir::PTXOperand::DataType::f16x2: {
+				for (size_t i = 0; i < array.dim3.size(); ++i) {
+					std::cout << "[" << array.array.p_f16x2[i].x << array.array.p_f16x2[i].y << "] ";
+				}
+				std::cout << std::endl;
+				break;
+			}
 			case ir::PTXOperand::DataType::f32: {
 				for (size_t i = 0; i < array.dim3.size(); ++i) {
 					std::cout << array.array.p_f32[i] << " ";
@@ -467,6 +579,16 @@ namespace test {
 			case ir::PTXOperand::DataType::f32:
 			{
 				delete[] array.array.p_f32;
+				break;
+			}
+			case ir::PTXOperand::DataType::f16:
+			{
+				delete[] array.array.p_f16;
+				break;
+			}
+			case ir::PTXOperand::DataType::f16x2:
+			{
+				delete[] array.array.p_f16x2;
 				break;
 			}
 			case ir::PTXOperand::DataType::s64:

@@ -172,6 +172,7 @@ namespace ir
 						case I32: stream << i32; break;
 						case I64: stream << i64; break;
 						case I128: stream << i128; break;
+						case F16: stream << f16; break;
 						case F32:
 						{
 							union
@@ -237,6 +238,7 @@ namespace ir
 							case I32: stream << fi->i32; break;
 							case I64: stream << fi->i64; break;
 							case I128: stream << fi->i128; break;
+							case F16: stream << fi->f16; break;
 							case F32:
 							{
 								union
@@ -380,6 +382,7 @@ namespace ir
 			case I32:  return "i32"; break;
 			case I64:  return "i64"; break;
 			case I128: return "i128"; break;
+			case F16:  return "half"; break;
 			case F32:  return "float"; break;
 			case F64:  return "double"; break;
 			case F128: return "fp128"; break;

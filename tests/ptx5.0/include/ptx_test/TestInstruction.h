@@ -45,6 +45,8 @@ namespace test {
 					int64_t* p_i64;
 					uint32_t* p_u32;
 					uint64_t* p_u64;
+					half* p_f16;
+					fp16x2_t* p_f16x2;
 				} array;
 				size_t bytesize; // bytesize
 				ir::Dim3 dim3;
@@ -56,6 +58,8 @@ namespace test {
 				ArrayWithSize(int64_t* p, size_t bsz, ir::Dim3 dim3);
 				ArrayWithSize(uint32_t* p, size_t bsz, ir::Dim3 dim3);
 				ArrayWithSize(uint64_t* p, size_t bsz, ir::Dim3 dim3);
+				ArrayWithSize(half* p, size_t bsz, ir::Dim3 dim3);
+				ArrayWithSize(fp16x2_t* p, size_t bsz, ir::Dim3 dim3);
 				// ArrayWithSize();
 				bool operator==(const ArrayWithSize& other) const;
 				static void* getPointer(const ArrayWithSize& arr);

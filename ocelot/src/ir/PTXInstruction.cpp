@@ -515,8 +515,7 @@ std::string ir::PTXInstruction::valid() const {
 			break;
 		}
 		case Add: {
-			if ( !( type != PTXOperand::s8 && type != PTXOperand::u8 && 
-				type != PTXOperand::b8 && type != PTXOperand::f16 
+			if ( !( type != PTXOperand::s8 && type != PTXOperand::u8 && type != PTXOperand::b8 
 				&& type != PTXOperand::pred ) ) {
 				return "invalid instruction type " 
 					+ PTXOperand::toString( type );

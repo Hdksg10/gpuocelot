@@ -2,6 +2,7 @@
 #define PTXKERNELCONFIG_H
 
 #include <cuda.h>
+#include <cuda_fp16.h>
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
@@ -13,6 +14,7 @@
 #include <hydrazine/json.h>
 #include <hydrazine/Exception.h>
 
+#include <ptx_test/fp16x2.hpp>
 
 
 class PTXKernelConfig {
@@ -24,6 +26,11 @@ class PTXKernelConfig {
 			uint32_t u32;
 			uint64_t u64;
 			float f32;
+			__half f16;
+			fp16x2_t f16x2;
+
+			Value() : f16x2(0.0, 0.0){};
+			
 		};
 		using ParamVector = std::vector<ir::PTXOperand::DataType>;
 		using SizeVector = std::vector<ir::Dim3>;

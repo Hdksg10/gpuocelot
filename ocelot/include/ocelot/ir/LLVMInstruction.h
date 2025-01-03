@@ -19,6 +19,7 @@ namespace ir
 	typedef long long LLVMI64;
 	typedef long long LLVMI128;
 	
+	typedef LLVMI16 LLVMF16;
 	typedef float LLVMF32;
 	typedef double LLVMF64;
 	typedef LLVMI128 LLVMF128;
@@ -97,6 +98,7 @@ namespace ir
 				I32,
 				I64,
 				I128,
+				F16,
 				F32,
 				F64,
 				F128,
@@ -243,6 +245,7 @@ namespace ir
 				LLVMI32 i32;
 				LLVMI64 i64;
 				LLVMI128 i128;
+				LLVMF16 f16;
 				LLVMF32 f32;
 				LLVMF64 f64;
 				LLVMF128 f128;
@@ -267,6 +270,7 @@ namespace ir
 						LLVMI32 i32;
 						LLVMI64 i64;
 						LLVMI128 i128;
+						LLVMF16 f16;
 						LLVMF32 f32;
 						LLVMF64 f64;
 						LLVMF128 f128;
