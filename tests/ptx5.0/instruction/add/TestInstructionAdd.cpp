@@ -9,7 +9,7 @@ namespace test {
         TestInstructionAddC() {
             name = "TestInstructionAdd";
 
-            description = "A unit test for the ADD.CC instruction.";
+            description = "A unit test for the ADD instruction.";
         }
     protected:
 

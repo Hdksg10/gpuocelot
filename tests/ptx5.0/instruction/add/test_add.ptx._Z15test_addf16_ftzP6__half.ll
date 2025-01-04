@@ -81,32 +81,42 @@ declare default i64 @__ocelot_brev_b64( i64  ) align 1;
 declare default i32 @__ocelot_brev_b32( i32  ) align 1;
 
 %Dimension = type { i32, i32, i32 };
-define default void @_Z_ocelotTranslated__Z10test_addccPm( %LLVMContext* %__ctaContext ) nounwind align 1;
+define default void @_Z_ocelotTranslated__Z15test_addf16_ftzP6__half( %LLVMContext* %__ctaContext ) nounwind align 1;
 {
-BB_1_2:
+BB_4_2:
 	%rt0 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 7;
 	%rt1 = load i8*, i8** %rt0;
 	%rt2 = bitcast i8* %rt1 to i64*;
 	%r0 = load i64, i64* %rt2, align 8;
 	%r1 = bitcast i64 %r0 to i64;
-	%r2 = bitcast i64 5 to i64;
-	%r3 = bitcast i64 -1 to i64;
-	%r5 = add i64 %r2, %r3;
-	%rt3 = icmp ult i64 %r5, %r2;
-	%rt4 = icmp ult i64 %r5, %r3;
-	%rt5 = or i1 %rt3, %rt4;
-	%r4 = select i1 %rt5, i32 1, i32 0;
-	%rt6 = add i64 0, 0;
-	%rt7 = sext i32 %r4 to i64;
-	%r6 = add i64 %rt6, %rt7;
-	%rt8 = inttoptr i64 %r1 to i64*;
-	store i64 %r6, i64* %rt8, align 8;
-	%rt9 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 4;
-	%rt10 = load i8*, i8** %rt9;
-	%rt11 = bitcast i8* %rt10 to i32*;
-	store i32 2, i32* %rt11;
-	br label %BB_1_1;
-BB_1_1:
+	%r2 = bitcast i16 1023 to i16;
+	%rt4 = bitcast i16 %r2 to half;
+	%rt5 = bitcast i16 %r2 to half;
+	%rt9 = fcmp olt half %rt4, 0xH0;
+	%rt10 = fsub half 0xH0, %rt4;
+	%rt11 = select i1 %rt9, half %rt10, half %rt4;
+	%rt12 = fcmp olt half %rt11, 0xH400;
+	%rt7 = select i1 %rt12, half 0xH0, half %rt4;
+	%rt13 = fcmp olt half %rt5, 0xH0;
+	%rt14 = fsub half 0xH0, %rt5;
+	%rt15 = select i1 %rt13, half %rt14, half %rt5;
+	%rt16 = fcmp olt half %rt15, 0xH400;
+	%rt8 = select i1 %rt16, half 0xH0, half %rt5;
+	%rt6 = fadd half %rt7, %rt8;
+	%rt18 = fcmp olt half %rt6, 0xH0;
+	%rt19 = fsub half 0xH0, %rt6;
+	%rt20 = select i1 %rt18, half %rt19, half %rt6;
+	%rt21 = fcmp olt half %rt20, 0xH400;
+	%rt17 = select i1 %rt21, half 0xH0, half %rt6;
+	%r3 = bitcast half %rt17 to i16;
+	%rt22 = inttoptr i64 %r1 to i16*;
+	store i16 %r3, i16* %rt22, align 2;
+	%rt23 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 4;
+	%rt24 = load i8*, i8** %rt23;
+	%rt25 = bitcast i8* %rt24 to i32*;
+	store i32 2, i32* %rt25;
+	br label %BB_4_1;
+BB_4_1:
 	ret void;
 
 }

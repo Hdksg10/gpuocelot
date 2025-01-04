@@ -21,9 +21,40 @@ __global__ void test_addf16(__half* d, __half* a, __half* b) {
     asm( "{add.f16 %0,%1,%2;\n}" \
         :"=h"(__HALF_TO_US(val)) : "h"(__HALF_TO_CUS(*a)),"h"(__HALF_TO_CUS(*b))); \
     *d = val;
-    // *d = __US_TO_HALF(result_us);
 }
 
-__global__ void test_subf16_v2(__half* d, __half* a, __half* b) {
-    *d = __hsub(*a, *b);
+
+__global__ void test_addf16_sat(__half* d) {
+    half result = 0.0f;
+    short a_val = 0x3bff;
+    short b_val = 0x3c00;
+    half a = *reinterpret_cast<half*>(&a_val);
+    half b = *reinterpret_cast<half*>(&b_val);
+    __half val; \
+    asm( "{add.sat.f16 %0,%1,%2;\n}" \
+        :"=h"(__HALF_TO_US(val)) : "h"(__HALF_TO_CUS(a)),"h"(__HALF_TO_CUS(b))); \
+    *d = val;
+}
+
+__global__ void test_addf16_ftz(__half* d) {
+    half result = 0.0f;
+    short a_val = 0x03ff; // the largest subnormal number
+    half a = *reinterpret_cast<half*>(&a_val);
+    half b = a;
+    __half val; \
+    asm( "{add.ftz.f16 %0,%1,%2;\n}" \
+        :"=h"(__HALF_TO_US(val)) : "h"(__HALF_TO_CUS(a)),"h"(__HALF_TO_CUS(b))); \
+    *d = val;
+}
+
+__global__ void test_addf16_ftz_sat(__half* d) {
+    half result = 0.0f;
+    short a_val = 0x03ff;
+    short b_val = 0x8401;
+    half a = *reinterpret_cast<half*>(&a_val);
+    half b = *reinterpret_cast<half*>(&b_val);
+    __half val; \
+    asm( "{add.ftz.sat.f16 %0,%1,%2;\n}" \
+        :"=h"(__HALF_TO_US(val)) : "h"(__HALF_TO_CUS(a)),"h"(__HALF_TO_CUS(b))); \
+    *d = val;
 }

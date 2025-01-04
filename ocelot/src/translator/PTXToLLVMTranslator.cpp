@@ -5,8 +5,6 @@
 	\comment : Written with subdued haste
 */
 
-#ifndef PTXTOLLVMTRANSLATOR_H
-#define PTXTOLLVMTRANSLATOR_H
 
 // Ocelot Includes
 #include <ocelot/translator/PTXToLLVMTranslator.h>
@@ -27,8 +25,6 @@
 #include <iostream>
 #include <limits>
 #include <memory>
-#include "ocelot/ir/LLVMStatement.h"
-#include "ocelot/ir/PTXOperand.h"
 
 // Preprocessor Macros
 #ifdef __i386__
@@ -1419,20 +1415,23 @@ void PTXToLLVMTranslator::_translateAdd( const ir::PTXInstruction& i )
 		if ( ir::PTXOperand::f16x2 == i.type) {
 			
 		}
-		// else if (ir::PTXOperand::f16 == i.type) {
-		// 	ir::LLVMCall tof16;
-		// 	ir::LLVMCall fromf16;
-		// }
 		else {
+			bool isF16 = (ir::PTXOperand::f16 == i.type);
+			bool isFtz = (i.modifier & ir::PTXInstruction::ftz);
+			bool isSat = (i.modifier & ir::PTXInstruction::sat);
+			// should we do anything special to fadd result?
+			bool needHandle = isSat || isFtz || isF16;
+
 			ir::LLVMFadd add;
 			
 			ir::LLVMInstruction::Operand result = _destination( i );
-			
-			add.a = _translate( i.a );
-			add.b = _translate( i.b );
+			auto a = _translate( i.a );
+			auto b = _translate( i.b );
+			add.a = a;
+			add.b = b;
 
-			if( i.modifier & ir::PTXInstruction::sat
-				|| i.modifier & ir::PTXInstruction::ftz )
+
+			if( needHandle )
 			{
 				add.d = add.a;
 				add.d.name = _tempRegister();
@@ -1441,10 +1440,7 @@ void PTXToLLVMTranslator::_translateAdd( const ir::PTXInstruction& i )
 			{
 				add.d = result;
 			}
-			if ( ir::PTXOperand::f16 == i.type) {
-				// add.a.type.type = ir::LLVMInstruction::DataType::F16;
-				// add.b.type.type = ir::LLVMInstruction::DataType::F16;
-				std::cout << i.a.type << std::endl;
+			if ( isF16 ) {
 				// PTX allows implicitly u16 to f16 bitcast
 				if ( (ir::LLVMInstruction::DataType::F16 != add.a.type.type) ||
 				(ir::LLVMInstruction::DataType::F16 != add.b.type.type) ) {
@@ -1472,34 +1468,47 @@ void PTXToLLVMTranslator::_translateAdd( const ir::PTXInstruction& i )
 				add.d.type.type = ir::LLVMInstruction::DataType::F16;
 
 			}
-			_add( add );
-			
-			if( i.modifier & ir::PTXInstruction::sat )
+			// flush subnormal inputs to zero
+			if ( isFtz )
 			{
-				if( i.modifier & ir::PTXInstruction::ftz )
-				{
-					ir::LLVMInstruction::Operand temp =
-						ir::LLVMInstruction::Operand( _tempRegister(),
-						add.d.type );
-					_saturate( temp, add.d );
-					_flushToZero( result, temp );
-				}
-				else
-				{
-					_saturate( result, add.d );
-				}
+				auto a_ftz = ir::LLVMInstruction::Operand( _tempRegister(), add.a.type );
+				auto b_ftz = ir::LLVMInstruction::Operand( _tempRegister(), add.b.type );
+				_flushToZero(a_ftz, add.a, isF16);
+				_flushToZero(b_ftz, add.b, isF16);
+				add.a = a_ftz;
+				add.b = b_ftz;
 			}
-			else if( i.modifier & ir::PTXInstruction::ftz )
-			{
-				_flushToZero( result, add.d );
+			_add( add );
+			if ( needHandle ) {
+				_handleModifier(result, add.d, isFtz, isSat, isF16);
 			}
 
-			if (ir::PTXOperand::f16 == i.type) {
-				ir::LLVMBitcast cast;
-				cast.a = add.d;
-				cast.d = result;
-				_add( cast );
-			}
+			// if( i.modifier & ir::PTXInstruction::sat )
+			// {
+			// 	if( i.modifier & ir::PTXInstruction::ftz )
+			// 	{
+			// 		ir::LLVMInstruction::Operand temp =
+			// 			ir::LLVMInstruction::Operand( _tempRegister(),
+			// 			add.d.type );
+			// 		_saturate( temp, add.d );
+			// 		_flushToZero( result, temp );
+			// 	}
+			// 	else
+			// 	{
+			// 		_saturate( result, add.d );
+			// 	}
+			// }
+			// else if( i.modifier & ir::PTXInstruction::ftz )
+			// {
+			// 	_flushToZero( result, add.d );
+			// }
+			
+			// if (ir::PTXOperand::f16 == i.type ) {
+			// 	ir::LLVMBitcast cast;
+			// 	cast.a = add.d;
+			// 	cast.d = result;
+			// 	_add( cast );
+			// }
 		}
 	}
 	else
@@ -8879,6 +8888,55 @@ void PTXToLLVMTranslator::_convert( const ir::LLVMInstruction::Operand& d,
 	}
 }
 
+void PTXToLLVMTranslator::_handleModifier( const ir::LLVMInstruction::Operand& d, 
+	const ir::LLVMInstruction::Operand& a, bool flushToZero, 
+	bool saturate, bool fp16 ) 
+{
+	// prepare temp registers as operands
+	std::vector<ir::LLVMInstruction::Operand> operands;
+	operands.push_back(a);
+	for ( int i = 0; i < (flushToZero + saturate + fp16) - 1; i++ )
+	{
+		operands.push_back( ir::LLVMInstruction::Operand( _tempRegister(), a.type ) );
+	}
+	operands.push_back(d);
+	int idx = 0;
+
+	if ( flushToZero )
+	{
+		_flushToZero( operands[idx+1], operands[idx], fp16 );
+		idx++;
+	}
+	if ( saturate )
+	{
+		_saturate( operands[idx+1], operands[idx], fp16 );
+		idx++;
+	}
+	if ( fp16 )
+	{
+		ir::LLVMBitcast cast;
+		cast.a = operands[idx];
+		cast.d = operands[idx+1];
+		_add( cast );
+		// TODO: why _bitcast function failed
+		// _bitcast( operands[idx+1], operands[idx] );
+		idx++;
+	}
+
+}
+
+void PTXToLLVMTranslator::_flushToZero( const ir::LLVMInstruction::Operand& d, 
+	const ir::LLVMInstruction::Operand& a, bool fp16 ) 
+{
+	if ( fp16 )
+	{
+		_flushToZeroFp16( d, a );
+	}
+	else {
+		_flushToZero(d, a);
+	}
+}
+
 void PTXToLLVMTranslator::_flushToZero(
 	const ir::LLVMInstruction::Operand& d,
 	const ir::LLVMInstruction::Operand& a )
@@ -8946,6 +9004,90 @@ void PTXToLLVMTranslator::_flushToZero(
 	_add( flush );
 }
 
+void PTXToLLVMTranslator::_flushToZeroFp16( const ir::LLVMInstruction::Operand& d,
+	const ir::LLVMInstruction::Operand& a ) 
+{
+	ir::LLVMFcmp less;
+	
+	less.comparison = ir::LLVMInstruction::Olt;
+	
+	less.d = ir::LLVMInstruction::Operand( _tempRegister(),
+		ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+		ir::LLVMInstruction::Type::Element ) );
+	less.a = a;
+	less.b = ir::LLVMInstruction::Operand( (ir::LLVMI64) 0 );
+	less.b.type.type = less.a.type.type;
+	
+	_add( less );
+
+	ir::LLVMFsub subtract;
+	
+	subtract.d = ir::LLVMInstruction::Operand( _tempRegister(),
+		ir::LLVMInstruction::Type( less.a.type.type, 
+		ir::LLVMInstruction::Type::Element ) );
+	subtract.a = ir::LLVMInstruction::Operand( (ir::LLVMI64) 0 );
+	subtract.a.type.type = less.a.type.type;
+	subtract.b = less.a;
+	
+	_add( subtract );
+	
+	ir::LLVMSelect select;
+	
+	select.condition = less.d;
+	
+	select.d = ir::LLVMInstruction::Operand( _tempRegister(),
+		ir::LLVMInstruction::Type( less.a.type.type, 
+		ir::LLVMInstruction::Type::Element ) );
+	select.a = subtract.d;
+	select.b = less.a;
+	
+	_add( select );
+	
+	ir::LLVMFcmp greaterEqual;
+	
+	greaterEqual.comparison = ir::LLVMInstruction::Olt;
+	
+	greaterEqual.d = ir::LLVMInstruction::Operand( _tempRegister(),
+		ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+		ir::LLVMInstruction::Type::Element ) );
+	greaterEqual.a = select.d;
+	
+	/* The smallest positive normal number 0x0400:
+	 *  0 | 00001 | 0000000000
+	 *  s |   E   |     M
+	 *   0000  | 0100 | 0000 | 0000
+	 * 0x  0  |   4  |   0  |   0
+	 */
+	greaterEqual.b = ir::LLVMInstruction::Operand( 
+		(ir::LLVMI16) 0x0400 );
+	
+	greaterEqual.b.type.type = less.a.type.type;
+	
+	_add( greaterEqual );
+
+	ir::LLVMSelect flush;
+	
+	flush.d = d;
+	flush.condition = greaterEqual.d;
+	flush.a = ir::LLVMInstruction::Operand( (ir::LLVMI16) 0x0000);
+	flush.a.type.type = a.type.type;
+	flush.b = a;
+	
+	_add( flush );
+}
+
+void PTXToLLVMTranslator::_saturate( const ir::LLVMInstruction::Operand& d, 
+    const ir::LLVMInstruction::Operand& a, bool fp16 ) 
+{
+	if ( fp16 )
+	{
+		_saturateFp16( d, a );
+	}
+	else {
+		_saturate( d, a );
+	}
+}
+
 void PTXToLLVMTranslator::_saturate( const ir::LLVMInstruction::Operand& d,
 	const ir::LLVMInstruction::Operand& a )
 {
@@ -8986,6 +9128,48 @@ void PTXToLLVMTranslator::_saturate( const ir::LLVMInstruction::Operand& d,
 	
 	_add( compare );
 	_add( select );	
+}
+
+void PTXToLLVMTranslator::_saturateFp16( const ir::LLVMInstruction::Operand& d,
+	const ir::LLVMInstruction::Operand& a )
+{
+	ir::LLVMFcmp compare;
+	
+	compare.d.name = _tempRegister();
+	compare.d.type.type = ir::LLVMInstruction::I1;
+	compare.d.type.category = ir::LLVMInstruction::Type::Element;
+	compare.comparison = ir::LLVMInstruction::Ult;
+	compare.a = a;
+	compare.b.type.type = compare.a.type.type;
+	compare.b.type.category = ir::LLVMInstruction::Type::Element;
+	compare.b.constant = true;
+	compare.b.f16 = 0x0000;
+	
+	ir::LLVMSelect select;
+	
+	select.d = ir::LLVMInstruction::Operand( _tempRegister(), 
+		ir::LLVMInstruction::Type( ir::LLVMInstruction::F16,
+		ir::LLVMInstruction::Type::Element ) );
+	select.condition = compare.d;
+	select.a = compare.b;
+	select.b = a;
+	
+	_add( compare );
+	_add( select );
+	
+	compare.d.name = _tempRegister();
+	compare.comparison = ir::LLVMInstruction::Ogt;
+	compare.b.f16 = 0x3c00; // 1.0
+	compare.a = a;
+	
+	select.b = select.d;
+	
+	select.d = d;		
+	select.condition = compare.d;
+	select.a = compare.b;
+	
+	_add( compare );
+	_add( select );
 }
 
 void PTXToLLVMTranslator::_floatToIntSaturate(
@@ -10832,6 +11016,4 @@ void PTXToLLVMTranslator::_addKernelSuffix()
 }
 	
 }
-
-#endif /* PTXTOLLVMTRANSLATOR_H */
 

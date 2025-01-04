@@ -81,32 +81,32 @@ declare default i64 @__ocelot_brev_b64( i64  ) align 1;
 declare default i32 @__ocelot_brev_b32( i32  ) align 1;
 
 %Dimension = type { i32, i32, i32 };
-define default void @_Z_ocelotTranslated__Z10test_addccPm( %LLVMContext* %__ctaContext ) nounwind align 1;
+define default void @_Z_ocelotTranslated__Z15test_addf16_satP6__half( %LLVMContext* %__ctaContext ) nounwind align 1;
 {
-BB_1_2:
+BB_3_2:
 	%rt0 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 7;
 	%rt1 = load i8*, i8** %rt0;
 	%rt2 = bitcast i8* %rt1 to i64*;
 	%r0 = load i64, i64* %rt2, align 8;
 	%r1 = bitcast i64 %r0 to i64;
-	%r2 = bitcast i64 5 to i64;
-	%r3 = bitcast i64 -1 to i64;
-	%r5 = add i64 %r2, %r3;
-	%rt3 = icmp ult i64 %r5, %r2;
-	%rt4 = icmp ult i64 %r5, %r3;
-	%rt5 = or i1 %rt3, %rt4;
-	%r4 = select i1 %rt5, i32 1, i32 0;
-	%rt6 = add i64 0, 0;
-	%rt7 = sext i32 %r4 to i64;
-	%r6 = add i64 %rt6, %rt7;
-	%rt8 = inttoptr i64 %r1 to i64*;
-	store i64 %r6, i64* %rt8, align 8;
-	%rt9 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 4;
-	%rt10 = load i8*, i8** %rt9;
-	%rt11 = bitcast i8* %rt10 to i32*;
-	store i32 2, i32* %rt11;
-	br label %BB_1_1;
-BB_1_1:
+	%r2 = bitcast i16 15359 to i16;
+	%r3 = bitcast i16 15360 to i16;
+	%rt4 = bitcast i16 %r2 to half;
+	%rt5 = bitcast i16 %r3 to half;
+	%rt6 = fadd half %rt4, %rt5;
+	%rt8 = fcmp ult half %rt6, 0xH0;
+	%rt9 = select i1 %rt8, half 0xH0, half %rt6;
+	%rt10 = fcmp ogt half %rt6, 0xH3c00;
+	%rt7 = select i1 %rt10, half 0xH3c00, half %rt9;
+	%r4 = bitcast half %rt7 to i16;
+	%rt11 = inttoptr i64 %r1 to i16*;
+	store i16 %r4, i16* %rt11, align 2;
+	%rt12 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 4;
+	%rt13 = load i8*, i8** %rt12;
+	%rt14 = bitcast i8* %rt13 to i32*;
+	store i32 2, i32* %rt14;
+	br label %BB_3_1;
+BB_3_1:
 	ret void;
 
 }

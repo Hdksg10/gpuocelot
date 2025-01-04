@@ -192,9 +192,26 @@ protected:
 		ir::PTXOperand::DataType dType, 
 		const ir::LLVMInstruction::Operand& s, 
 		ir::PTXOperand::DataType sType, int modifier = 0 );
+
+	/* Helper function to handle floating point modifier and fp16 conversion
+	 * This function will sequentially call _flushToZero, _saturate, and _bitcast 
+	 * the result to u16 type if fp16 conversion is needed. 
+	 */
+	void _handleModifier( const ir::LLVMInstruction::Operand& d, 
+		const ir::LLVMInstruction::Operand& a, bool flushToZero = false, 
+		bool saturate = false, bool fp16 = false );
+
+	void _flushToZero( const ir::LLVMInstruction::Operand& d, 
+		const ir::LLVMInstruction::Operand& a, bool fp16 );
 	void _flushToZero( const ir::LLVMInstruction::Operand& d, 
 		const ir::LLVMInstruction::Operand& a );
+	void _flushToZeroFp16( const ir::LLVMInstruction::Operand& d, 
+		const ir::LLVMInstruction::Operand& a );
 	void _saturate( const ir::LLVMInstruction::Operand& d, 
+		const ir::LLVMInstruction::Operand& a, bool fp16 );
+	void _saturate( const ir::LLVMInstruction::Operand& d, 
+		const ir::LLVMInstruction::Operand& a );
+	void _saturateFp16( const ir::LLVMInstruction::Operand& d, 
 		const ir::LLVMInstruction::Operand& a );
 	void _floatToIntSaturate( const ir::LLVMInstruction::Operand& d, 
 		const ir::LLVMInstruction::Operand& ftoint,

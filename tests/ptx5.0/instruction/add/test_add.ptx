@@ -60,30 +60,68 @@
 	ret;
 
 }
-	// .globl	_Z14test_addf16_v2P6__halfS0_S0_
-.visible .entry _Z14test_addf16_v2P6__halfS0_S0_(
-	.param .u64 _Z14test_addf16_v2P6__halfS0_S0__param_0,
-	.param .u64 _Z14test_addf16_v2P6__halfS0_S0__param_1,
-	.param .u64 _Z14test_addf16_v2P6__halfS0_S0__param_2
+	// .globl	_Z15test_addf16_satP6__half
+.visible .entry _Z15test_addf16_satP6__half(
+	.param .u64 _Z15test_addf16_satP6__half_param_0
 )
 {
-	.reg .b16 	%rs<4>;
-	.reg .b64 	%rd<7>;
+	.reg .b16 	%rs<5>;
+	.reg .f32 	%f<2>;
+	.reg .b64 	%rd<3>;
 
 
-	ld.param.u64 	%rd1, [_Z14test_addf16_v2P6__halfS0_S0__param_0];
-	ld.param.u64 	%rd2, [_Z14test_addf16_v2P6__halfS0_S0__param_1];
-	ld.param.u64 	%rd3, [_Z14test_addf16_v2P6__halfS0_S0__param_2];
-	cvta.to.global.u64 	%rd4, %rd1;
-	cvta.to.global.u64 	%rd5, %rd3;
-	cvta.to.global.u64 	%rd6, %rd2;
-	ld.global.u16 	%rs2, [%rd6];
-	ld.global.u16 	%rs3, [%rd5];
+	ld.param.u64 	%rd1, [_Z15test_addf16_satP6__half_param_0];
+	cvta.to.global.u64 	%rd2, %rd1;
+	mov.u16 	%rs3, 15359;
+	mov.u16 	%rs4, 15360;
 	// begin inline asm
-	{sub.f16 %rs1,%rs2,%rs3;
+	{add.sat.f16 %rs2,%rs3,%rs4;
 }
 	// end inline asm
-	st.global.u16 	[%rd4], %rs1;
+	st.global.u16 	[%rd2], %rs2;
+	ret;
+
+}
+	// .globl	_Z15test_addf16_ftzP6__half
+.visible .entry _Z15test_addf16_ftzP6__half(
+	.param .u64 _Z15test_addf16_ftzP6__half_param_0
+)
+{
+	.reg .b16 	%rs<5>;
+	.reg .f32 	%f<2>;
+	.reg .b64 	%rd<3>;
+
+
+	ld.param.u64 	%rd1, [_Z15test_addf16_ftzP6__half_param_0];
+	cvta.to.global.u64 	%rd2, %rd1;
+	mov.u16 	%rs4, 1023;
+	// begin inline asm
+	{add.ftz.f16 %rs2,%rs4,%rs4;
+}
+	// end inline asm
+	st.global.u16 	[%rd2], %rs2;
+	ret;
+
+}
+	// .globl	_Z19test_addf16_ftz_satP6__half
+.visible .entry _Z19test_addf16_ftz_satP6__half(
+	.param .u64 _Z19test_addf16_ftz_satP6__half_param_0
+)
+{
+	.reg .b16 	%rs<5>;
+	.reg .f32 	%f<2>;
+	.reg .b64 	%rd<3>;
+
+
+	ld.param.u64 	%rd1, [_Z19test_addf16_ftz_satP6__half_param_0];
+	cvta.to.global.u64 	%rd2, %rd1;
+	mov.u16 	%rs3, 1023;
+	mov.u16 	%rs4, -31743;
+	// begin inline asm
+	{add.ftz.sat.f16 %rs2,%rs3,%rs4;
+}
+	// end inline asm
+	st.global.u16 	[%rd2], %rs2;
 	ret;
 
 }

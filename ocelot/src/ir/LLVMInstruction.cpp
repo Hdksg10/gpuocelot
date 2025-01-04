@@ -172,7 +172,10 @@ namespace ir
 						case I32: stream << i32; break;
 						case I64: stream << i64; break;
 						case I128: stream << i128; break;
-						case F16: stream << f16; break;
+						case F16: {
+							stream << "0xH" << std::hex << f16;
+							break;
+						}
 						case F32:
 						{
 							union

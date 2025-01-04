@@ -103,16 +103,16 @@ BB_2_2:
 	%r6 = load i16, i16* %rt9, align 2;
 	%rt10 = inttoptr i64 %r4 to i16*;
 	%r7 = load i16, i16* %rt10, align 2;
-	%rt11 = bitcast i16 %r6 to half;
-	%rt12 = bitcast i16 %r7 to half;
-	%rt13 = fadd half %rt11, %rt12;
-	%r8 = bitcast half %rt13 to i16;
-	%rt14 = inttoptr i64 %r3 to i16*;
-	store i16 %r8, i16* %rt14, align 2;
-	%rt15 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 4;
-	%rt16 = load i8*, i8** %rt15;
-	%rt17 = bitcast i8* %rt16 to i32*;
-	store i32 2, i32* %rt17;
+	%rt12 = bitcast i16 %r6 to half;
+	%rt13 = bitcast i16 %r7 to half;
+	%rt14 = fadd half %rt12, %rt13;
+	%r8 = bitcast half %rt14 to i16;
+	%rt15 = inttoptr i64 %r3 to i16*;
+	store i16 %r8, i16* %rt15, align 2;
+	%rt16 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 4;
+	%rt17 = load i8*, i8** %rt16;
+	%rt18 = bitcast i8* %rt17 to i32*;
+	store i32 2, i32* %rt18;
 	br label %BB_2_1;
 BB_2_1:
 	ret void;
