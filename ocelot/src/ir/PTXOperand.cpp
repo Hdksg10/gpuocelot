@@ -342,6 +342,15 @@ bool ir::PTXOperand::valid( DataType destination, DataType source ) {
 			}
 			break;
 		}
+		case f16x2: {
+			switch (source) {
+				case b32: /* fall through */
+				case f32: /* fall through */
+				case f16x2: return true; break;
+				default: break;
+			}
+			break;
+		}
 		case f16: {
 			switch( source ) {
 				case b16: /* fall through */

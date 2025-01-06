@@ -14,8 +14,6 @@
 #include <hydrazine/json.h>
 #include <hydrazine/Exception.h>
 
-#include <ptx_test/fp16x2.hpp>
-
 
 class PTXKernelConfig {
 	public:
@@ -26,10 +24,10 @@ class PTXKernelConfig {
 			uint32_t u32;
 			uint64_t u64;
 			float f32;
-			__half f16;
-			fp16x2_t f16x2;
+			half f16;
+			int32_t f16x2; // we use int32_t to store f16x2 value
 
-			Value() : f16x2(0.0, 0.0){};
+			// Value() : f16x2(0.0, 0.0){};
 			
 		};
 		using ParamVector = std::vector<ir::PTXOperand::DataType>;

@@ -3,6 +3,8 @@
 
 %LLVMContext = type { %Dimension, %Dimension, %Dimension, %Dimension, i8*, i8*, i8*, i8*, i8*, i8*, i32 };
 declare default i32 @__ocelot_get_extent( %LLVMContext* , i32  ) align 1;
+declare default i16 @llvm.convert.to.fp16.f32( float  ) align 1;
+declare default float @llvm.convert.from.fp16.f32( i16  ) align 1;
 declare default float @llvm.pow.f32( float , float  ) align 1;
 declare default float @llvm.exp2.f32( float  ) align 1;
 declare default float @llvm.log2.f32( float  ) align 1;
@@ -79,35 +81,40 @@ declare default i64 @__ocelot_brev_b64( i64  ) align 1;
 declare default i32 @__ocelot_brev_b32( i32  ) align 1;
 
 %Dimension = type { i32, i32, i32 };
-define default void @_Z_ocelotTranslated__Z10test_subccPm( %LLVMContext* %__ctaContext ) nounwind align 1;
+define default void @_Z_ocelotTranslated__Z13test_addf16x2P7__half2S0_S0_( %LLVMContext* %__ctaContext ) nounwind align 1;
 {
-BB_1_2:
+BB_6_2:
 	%rt0 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 7;
 	%rt1 = load i8*, i8** %rt0;
 	%rt2 = bitcast i8* %rt1 to i64*;
 	%r0 = load i64, i64* %rt2, align 8;
-	%r1 = bitcast i64 %r0 to i64;
-	%r2 = bitcast i64 5 to i64;
-	%r3 = bitcast i64 6 to i64;
-	%rt3 = sub i64 0, %r3;
-	%r5 = add i64 %r2, %rt3;
-	%rt4 = icmp ult i64 %r5, %r2;
-	%rt5 = icmp ult i64 %r5, %rt3;
-	%rt6 = or i1 %rt4, %rt5;
-	%r4 = select i1 %rt6, i32 1, i32 0;
-	%rt7 = sub i64 0, 0;
-	%rt8 = add i64 2, %rt7;
-	%rt10 = sext i32 %r4 to i64;
-	%rt9 = add i64 %rt8, %rt10;
-	%r6 = sub i64 %rt9, 1;
-	%rt11 = inttoptr i64 %r1 to i64*;
-	store i64 %r6, i64* %rt11, align 8;
-	%rt12 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 4;
-	%rt13 = load i8*, i8** %rt12;
-	%rt14 = bitcast i8* %rt13 to i32*;
-	store i32 2, i32* %rt14;
-	br label %BB_1_1;
-BB_1_1:
+	%rt3 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 7;
+	%rt4 = load i8*, i8** %rt3;
+	%rt5 = bitcast i8* %rt4 to i64*;
+	%r1 = load i64, i64* %rt5, align 8;
+	%rt6 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 7;
+	%rt7 = load i8*, i8** %rt6;
+	%rt8 = bitcast i8* %rt7 to i64*;
+	%r2 = load i64, i64* %rt8, align 8;
+	%r3 = bitcast i64 %r0 to i64;
+	%r4 = bitcast i64 %r2 to i64;
+	%r5 = bitcast i64 %r1 to i64;
+	%rt9 = inttoptr i64 %r5 to i32*;
+	%r6 = load i32, i32* %rt9, align 4;
+	%rt10 = inttoptr i64 %r4 to i32*;
+	%r7 = load i32, i32* %rt10, align 4;
+	%rt11 = bitcast i32 %r6 to < 2 x half >;
+	%rt12 = bitcast i32 %r7 to < 2 x half >;
+	%rt13 = fadd < 2 x half > %rt11, %rt12;
+	%r8 = bitcast < 2 x half > %rt13 to i32;
+	%rt14 = inttoptr i64 %r3 to i32*;
+	store i32 %r8, i32* %rt14, align 4;
+	%rt15 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 4;
+	%rt16 = load i8*, i8** %rt15;
+	%rt17 = bitcast i8* %rt16 to i32*;
+	store i32 2, i32* %rt17;
+	br label %BB_6_1;
+BB_6_1:
 	ret void;
 
 }

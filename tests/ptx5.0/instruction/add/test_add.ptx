@@ -39,8 +39,7 @@
 	.param .u64 _Z11test_addf16P6__halfS0_S0__param_2
 )
 {
-	.reg .b16 	%rs<5>;
-	.reg .f32 	%f<2>;
+	.reg .b16 	%rs<4>;
 	.reg .b64 	%rd<7>;
 
 
@@ -50,13 +49,13 @@
 	cvta.to.global.u64 	%rd4, %rd1;
 	cvta.to.global.u64 	%rd5, %rd3;
 	cvta.to.global.u64 	%rd6, %rd2;
-	ld.global.u16 	%rs3, [%rd6];
-	ld.global.u16 	%rs4, [%rd5];
+	ld.global.u16 	%rs2, [%rd6];
+	ld.global.u16 	%rs3, [%rd5];
 	// begin inline asm
-	{add.f16 %rs2,%rs3,%rs4;
+	{add.f16 %rs1,%rs2,%rs3;
 }
 	// end inline asm
-	st.global.u16 	[%rd4], %rs2;
+	st.global.u16 	[%rd4], %rs1;
 	ret;
 
 }
@@ -65,20 +64,19 @@
 	.param .u64 _Z15test_addf16_satP6__half_param_0
 )
 {
-	.reg .b16 	%rs<5>;
-	.reg .f32 	%f<2>;
+	.reg .b16 	%rs<4>;
 	.reg .b64 	%rd<3>;
 
 
 	ld.param.u64 	%rd1, [_Z15test_addf16_satP6__half_param_0];
 	cvta.to.global.u64 	%rd2, %rd1;
-	mov.u16 	%rs3, 15359;
-	mov.u16 	%rs4, 15360;
+	mov.u16 	%rs2, 15359;
+	mov.u16 	%rs3, 15360;
 	// begin inline asm
-	{add.sat.f16 %rs2,%rs3,%rs4;
+	{add.sat.f16 %rs1,%rs2,%rs3;
 }
 	// end inline asm
-	st.global.u16 	[%rd2], %rs2;
+	st.global.u16 	[%rd2], %rs1;
 	ret;
 
 }
@@ -87,19 +85,18 @@
 	.param .u64 _Z15test_addf16_ftzP6__half_param_0
 )
 {
-	.reg .b16 	%rs<5>;
-	.reg .f32 	%f<2>;
+	.reg .b16 	%rs<4>;
 	.reg .b64 	%rd<3>;
 
 
 	ld.param.u64 	%rd1, [_Z15test_addf16_ftzP6__half_param_0];
 	cvta.to.global.u64 	%rd2, %rd1;
-	mov.u16 	%rs4, 1023;
+	mov.u16 	%rs3, 1023;
 	// begin inline asm
-	{add.ftz.f16 %rs2,%rs4,%rs4;
+	{add.ftz.f16 %rs1,%rs3,%rs3;
 }
 	// end inline asm
-	st.global.u16 	[%rd2], %rs2;
+	st.global.u16 	[%rd2], %rs1;
 	ret;
 
 }
@@ -108,20 +105,108 @@
 	.param .u64 _Z19test_addf16_ftz_satP6__half_param_0
 )
 {
-	.reg .b16 	%rs<5>;
-	.reg .f32 	%f<2>;
+	.reg .b16 	%rs<4>;
 	.reg .b64 	%rd<3>;
 
 
 	ld.param.u64 	%rd1, [_Z19test_addf16_ftz_satP6__half_param_0];
 	cvta.to.global.u64 	%rd2, %rd1;
-	mov.u16 	%rs3, 1023;
-	mov.u16 	%rs4, -31743;
+	mov.u16 	%rs2, 1023;
+	mov.u16 	%rs3, -31743;
 	// begin inline asm
-	{add.ftz.sat.f16 %rs2,%rs3,%rs4;
+	{add.ftz.sat.f16 %rs1,%rs2,%rs3;
 }
 	// end inline asm
-	st.global.u16 	[%rd2], %rs2;
+	st.global.u16 	[%rd2], %rs1;
+	ret;
+
+}
+	// .globl	_Z13test_addf16x2P7__half2S0_S0_
+.visible .entry _Z13test_addf16x2P7__half2S0_S0_(
+	.param .u64 _Z13test_addf16x2P7__half2S0_S0__param_0,
+	.param .u64 _Z13test_addf16x2P7__half2S0_S0__param_1,
+	.param .u64 _Z13test_addf16x2P7__half2S0_S0__param_2
+)
+{
+	.reg .b32 	%r<4>;
+	.reg .b64 	%rd<7>;
+
+
+	ld.param.u64 	%rd1, [_Z13test_addf16x2P7__half2S0_S0__param_0];
+	ld.param.u64 	%rd2, [_Z13test_addf16x2P7__half2S0_S0__param_1];
+	ld.param.u64 	%rd3, [_Z13test_addf16x2P7__half2S0_S0__param_2];
+	cvta.to.global.u64 	%rd4, %rd1;
+	cvta.to.global.u64 	%rd5, %rd3;
+	cvta.to.global.u64 	%rd6, %rd2;
+	ld.global.u32 	%r2, [%rd6];
+	ld.global.u32 	%r3, [%rd5];
+	// begin inline asm
+	{add.f16x2 %r1,%r2,%r3;
+}
+	// end inline asm
+	st.global.u32 	[%rd4], %r1;
+	ret;
+
+}
+	// .globl	_Z17test_addf16x2_satP7__half2
+.visible .entry _Z17test_addf16x2_satP7__half2(
+	.param .u64 _Z17test_addf16x2_satP7__half2_param_0
+)
+{
+	.reg .b32 	%r<4>;
+	.reg .b64 	%rd<3>;
+
+
+	ld.param.u64 	%rd1, [_Z17test_addf16x2_satP7__half2_param_0];
+	cvta.to.global.u64 	%rd2, %rd1;
+	mov.u32 	%r2, 1006386175;
+	mov.u32 	%r3, 1006713856;
+	// begin inline asm
+	{add.sat.f16x2 %r1,%r2,%r3;
+}
+	// end inline asm
+	st.global.u32 	[%rd2], %r1;
+	ret;
+
+}
+	// .globl	_Z17test_addf16x2_ftzP7__half2
+.visible .entry _Z17test_addf16x2_ftzP7__half2(
+	.param .u64 _Z17test_addf16x2_ftzP7__half2_param_0
+)
+{
+	.reg .b32 	%r<4>;
+	.reg .b64 	%rd<3>;
+
+
+	ld.param.u64 	%rd1, [_Z17test_addf16x2_ftzP7__half2_param_0];
+	cvta.to.global.u64 	%rd2, %rd1;
+	mov.u32 	%r3, 67044351;
+	// begin inline asm
+	{add.ftz.f16x2 %r1,%r3,%r3;
+}
+	// end inline asm
+	st.global.u32 	[%rd2], %r1;
+	ret;
+
+}
+	// .globl	_Z21test_addf16x2_ftz_satP7__half2
+.visible .entry _Z21test_addf16x2_ftz_satP7__half2(
+	.param .u64 _Z21test_addf16x2_ftz_satP7__half2_param_0
+)
+{
+	.reg .b32 	%r<4>;
+	.reg .b64 	%rd<3>;
+
+
+	ld.param.u64 	%rd1, [_Z21test_addf16x2_ftz_satP7__half2_param_0];
+	cvta.to.global.u64 	%rd2, %rd1;
+	mov.u32 	%r2, 66978815;
+	mov.u32 	%r3, -2079685631;
+	// begin inline asm
+	{add.ftz.sat.f16x2 %r1,%r2,%r3;
+}
+	// end inline asm
+	st.global.u32 	[%rd2], %r1;
 	ret;
 
 }

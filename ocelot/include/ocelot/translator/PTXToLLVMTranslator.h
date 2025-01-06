@@ -4,8 +4,8 @@
 	\brief The header file for the PTXToLLVMTranslator class
 */
 
-#ifndef PTX_TO_LLVM_TRANSLATOR_H_INCLUDED
-#define PTX_TO_LLVM_TRANSLATOR_H_INCLUDED
+#ifndef PTXTOLLVMTRANSLATOR_H
+#define PTXTOLLVMTRANSLATOR_H
 
 // Ocelot Includes
 #include <ocelot/translator/Translator.h>
@@ -207,11 +207,15 @@ protected:
 		const ir::LLVMInstruction::Operand& a );
 	void _flushToZeroFp16( const ir::LLVMInstruction::Operand& d, 
 		const ir::LLVMInstruction::Operand& a );
+	void _flushToZeroFp16x2( const ir::LLVMInstruction::Operand& d, 
+		const ir::LLVMInstruction::Operand& a );
 	void _saturate( const ir::LLVMInstruction::Operand& d, 
 		const ir::LLVMInstruction::Operand& a, bool fp16 );
 	void _saturate( const ir::LLVMInstruction::Operand& d, 
 		const ir::LLVMInstruction::Operand& a );
 	void _saturateFp16( const ir::LLVMInstruction::Operand& d, 
+		const ir::LLVMInstruction::Operand& a );
+	void _saturateFp16x2( const ir::LLVMInstruction::Operand& d, 
 		const ir::LLVMInstruction::Operand& a );
 	void _floatToIntSaturate( const ir::LLVMInstruction::Operand& d, 
 		const ir::LLVMInstruction::Operand& ftoint,
@@ -273,5 +277,5 @@ protected:
 
 }
 
-#endif
+#endif /* PTXTOLLVMTRANSLATOR_H */
 

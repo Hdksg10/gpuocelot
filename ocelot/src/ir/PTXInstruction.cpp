@@ -1234,8 +1234,7 @@ std::string ir::PTXInstruction::valid() const {
 		}
 		case Mul: {
 			if( type == PTXOperand::s8 || type == PTXOperand::u8 
-				|| type == PTXOperand::b8 || type == PTXOperand::f16 
-				|| type == PTXOperand::pred ) {
+				|| type == PTXOperand::b8 || type == PTXOperand::pred ) {
 				return "invalid instruction type " 
 					+ PTXOperand::toString( type );
 			}
@@ -1874,8 +1873,7 @@ std::string ir::PTXInstruction::valid() const {
 		}
 		case Sub: {
 			if ( !( type != PTXOperand::s8 && type != PTXOperand::u8 && 
-				type != PTXOperand::b8 && type != PTXOperand::f16 
-				&& type != PTXOperand::pred ) ) {
+				type != PTXOperand::b8 && type != PTXOperand::pred ) ) {
 				return "invalid instruction type " 
 					+ PTXOperand::toString( type );
 			}

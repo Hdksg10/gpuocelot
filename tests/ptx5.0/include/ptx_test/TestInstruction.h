@@ -46,7 +46,7 @@ namespace test {
 					uint32_t* p_u32;
 					uint64_t* p_u64;
 					half* p_f16;
-					fp16x2_t* p_f16x2;
+					half2* p_f16x2;
 				} array;
 				size_t bytesize; // bytesize
 				ir::Dim3 dim3;
@@ -59,7 +59,7 @@ namespace test {
 				ArrayWithSize(uint32_t* p, size_t bsz, ir::Dim3 dim3);
 				ArrayWithSize(uint64_t* p, size_t bsz, ir::Dim3 dim3);
 				ArrayWithSize(half* p, size_t bsz, ir::Dim3 dim3);
-				ArrayWithSize(fp16x2_t* p, size_t bsz, ir::Dim3 dim3);
+				ArrayWithSize(half2* p, size_t bsz, ir::Dim3 dim3);
 				// ArrayWithSize();
 				bool operator==(const ArrayWithSize& other) const;
 				static void* getPointer(const ArrayWithSize& arr);
@@ -94,6 +94,8 @@ namespace test {
 
 			static bool _freeArray(ArrayWithSize array);
 
+			static half2 int32ToHalf2(int32_t a);
+			
 			template<typename T>
 			void _randomArray(T* a, ir::Dim3 dim);
 			template<typename T>

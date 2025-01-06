@@ -9,108 +9,114 @@
 #define __HALF2_TO_UI(var) *(reinterpret_cast<unsigned int *>(&(var)))
 #define __HALF2_TO_CUI(var) *(reinterpret_cast<const unsigned int *>(&(var)))
 
-__global__ void test_addcc(unsigned long* d) {
+__global__ void test_subcc(unsigned long* d) {
     unsigned long result = 0;  
 
     asm(
-        "add.cc.u64 %0, %1, %2;\n\t"
-        "addc.u64 %0, 0, 0;\n\t"          
+        "sub.cc.u64 %0, %1, %2;\n\t"
+        "subc.u64 %0, 2, 0;\n\t"          
         : "=l"(result)                       
-        : "l"(5l), "l"(0xffffffffffffffff)                              
+        : "l"(5l), "l"(6l)                              
     );
 
     *d = result;
 }
 
-__global__ void test_addf16(half* d, half* a, half* b) {
+__global__ void test_subf16(half* d, half* a, half* b) {
     half val; 
-    asm( "{add.f16 %0,%1,%2;\n}" \
+    asm( "{sub.f16 %0,%1,%2;\n}" \
         :"=h"(__HALF_TO_US(val)) : "h"(__HALF_TO_CUS(*a)),"h"(__HALF_TO_CUS(*b))); \
     *d = val;
 }
 
 
-__global__ void test_addf16_sat(half* d) {
+__global__ void test_subf16_sat(half* d) {
     short a_val = 0x3bff;
     short b_val = 0x3c00;
     half a = *reinterpret_cast<half*>(&a_val);
     half b = *reinterpret_cast<half*>(&b_val);
     half val; 
-    asm( "{add.sat.f16 %0,%1,%2;\n}" \
+    asm( "{sub.sat.f16 %0,%1,%2;\n}" \
         :"=h"(__HALF_TO_US(val)) : "h"(__HALF_TO_CUS(a)),"h"(__HALF_TO_CUS(b))); \
     *d = val;
 }
 
-__global__ void test_addf16_ftz(half* d) {
+__global__ void test_subf16_ftz(half* d) {
     short a_val = 0x03ff; // the largest subnormal number
-    half a = *reinterpret_cast<half*>(&a_val);
-    half b = a;
-    half val; 
-    asm( "{add.ftz.f16 %0,%1,%2;\n}" \
-        :"=h"(__HALF_TO_US(val)) : "h"(__HALF_TO_CUS(a)),"h"(__HALF_TO_CUS(b))); \
-    *d = val;
-}
-
-__global__ void test_addf16_ftz_sat(half* d) {
-    short a_val = 0x03ff;
-    short b_val = 0x8401;
+    short b_val = 0x03fe;
     half a = *reinterpret_cast<half*>(&a_val);
     half b = *reinterpret_cast<half*>(&b_val);
     half val; 
-    asm( "{add.ftz.sat.f16 %0,%1,%2;\n}" \
+    asm( "{sub.ftz.f16 %0,%1,%2;\n}" \
         :"=h"(__HALF_TO_US(val)) : "h"(__HALF_TO_CUS(a)),"h"(__HALF_TO_CUS(b))); \
     *d = val;
 }
 
-__global__ void test_addf16x2(half2* d, half2* a, half2* b) {
+__global__ void test_subf16_ftz_sat(half* d) {
+    short a_val = 0x03fe;
+    short b_val = 0x83ff;
+    half a = *reinterpret_cast<half*>(&a_val);
+    half b = *reinterpret_cast<half*>(&b_val);
+    half val; 
+    asm( "{sub.ftz.sat.f16 %0,%1,%2;\n}" \
+        :"=h"(__HALF_TO_US(val)) : "h"(__HALF_TO_CUS(a)),"h"(__HALF_TO_CUS(b))); \
+    *d = val;
+}
+
+__global__ void test_subf16x2(half2* d, half2* a, half2* b) {
     half2 val; 
-    asm( "{add.f16x2 %0,%1,%2;\n}" \
+    asm( "{sub.f16x2 %0,%1,%2;\n}" \
         :"=r"(__HALF2_TO_UI(val)) : "r"(__HALF2_TO_CUI(*a)),"r"(__HALF2_TO_CUI(*b))); \
     *d = val;
 }
 
-__global__ void test_addf16x2_sat(half2* d) {
+__global__ void test_subf16x2_sat(half2* d) {
     half2 val; 
     short ah_val = 0x3bff;
-    short al_val = 0x3bfc;
+    short al_val = 0x7bff;
     short bh_val = 0x3c00;
-    short bl_val = 0x3c01;
+    short bl_val = 0x03ff;
     half ah = *reinterpret_cast<half*>(&ah_val);
     half al = *reinterpret_cast<half*>(&al_val);
     half bh = *reinterpret_cast<half*>(&bh_val);
     half bl = *reinterpret_cast<half*>(&bl_val);
     half2 a(ah,al);
     half2 b(bh,bl);
-    asm( "{add.sat.f16x2 %0,%1,%2;\n}" \
+    asm( "{sub.sat.f16x2 %0,%1,%2;\n}" \
         :"=r"(__HALF2_TO_UI(val)) : "r"(__HALF2_TO_CUI(a)),"r"(__HALF2_TO_CUI(b))); \
     *d = val;
 }
 
-__global__ void test_addf16x2_ftz(half2* d) {
+__global__ void test_subf16x2_ftz(half2* d) {
     half2 val; 
     short ah_val = 0x03ff; // the largest subnormal number
-    short al_val = 0x03ff;
+    short al_val = 0x0400;
+    short bl_val = 0x03fe;
+    short bh_val = 0x0401;
     half ah = *reinterpret_cast<half*>(&ah_val);
     half al = *reinterpret_cast<half*>(&al_val);
+    half bh = *reinterpret_cast<half*>(&bh_val);
+    half bl = *reinterpret_cast<half*>(&bl_val);
     half2 a(ah,al);
-    asm( "{add.ftz.f16x2 %0,%1,%2;\n}" \
-        :"=r"(__HALF2_TO_UI(val)) : "r"(__HALF2_TO_CUI(a)),"r"(__HALF2_TO_CUI(a))); \
+    half2 b(bh, bl);
+    asm( "{sub.ftz.f16x2 %0,%1,%2;\n}" \
+        :"=r"(__HALF2_TO_UI(val)) : "r"(__HALF2_TO_CUI(a)),"r"(__HALF2_TO_CUI(b))); \
     *d = val;
 }
 
-__global__ void test_addf16x2_ftz_sat(half2* d) {
+__global__ void test_subf16x2_ftz_sat(half2* d) {
     half2 val; 
     short ah_val = 0x03ff;
     short al_val = 0x03fe;
     short bh_val = 0x8401;
-    short bl_val = 0x840a;
+    short bl_val = 0x83ff;
     half ah = *reinterpret_cast<half*>(&ah_val);
     half al = *reinterpret_cast<half*>(&al_val);
     half bh = *reinterpret_cast<half*>(&bh_val);
     half bl = *reinterpret_cast<half*>(&bl_val);
     half2 a(ah,al);
     half2 b(bh,bl);
-    asm( "{add.ftz.sat.f16x2 %0,%1,%2;\n}" \
+    asm( "{sub.ftz.sat.f16x2 %0,%1,%2;\n}" \
         :"=r"(__HALF2_TO_UI(val)) : "r"(__HALF2_TO_CUI(a)),"r"(__HALF2_TO_CUI(b))); \
     *d = val;
 }

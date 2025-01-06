@@ -1,0 +1,22 @@
+{
+    "kernel": "_Z21test_subf16x2_ftz_satP7__half2",
+    "threads" : {
+        "x" : 1,
+        "y" : 1,
+        "z" : 1
+    },
+    "blocks" : {
+        "x" : 1,
+        "y" : 1,
+        "z" : 1
+    },
+    "params" : ["f16x2"],
+    "dest": 0,
+    "size" : [
+        {
+            "x" : 1,
+            "y" : 1,
+            "z" : 1
+        }
+    ]
+}

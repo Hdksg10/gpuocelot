@@ -9,7 +9,7 @@ namespace test {
         TestInstructionSubC() {
             name = "TestInstructionSub";
 
-            description = "A unit test for the SUB.CC instruction.";
+            description = "A unit test for the SUB instruction.";
         }
     protected:
 
@@ -33,7 +33,7 @@ int main( int argc, char** argv )
 	parser.description( test.testDescription() );
 
 	parser.parse("-c", test.configPath, "../instruction/sub/config.test", "Test configuration path.");
-	parser.parse( "-i", test.input, "../instruction/sub/test_subcc.ptx",
+	parser.parse( "-i", test.input, "../instruction/sub/test_sub.ptx",
 		"Test PTX path.");
 	parser.parse( "-r", test.recursive, false, 
 		"Recursively search directories.");

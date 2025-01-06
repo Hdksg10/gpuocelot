@@ -6,7 +6,6 @@
 #include <boost/filesystem.hpp>
 #include <cmath>
 #include "ocelot/ir/PTXOperand.h"
-#include "ptx_test/half.hpp"
 
 #ifdef REPORT_BASE
 #undef REPORT_BASE
@@ -79,7 +78,7 @@ namespace test {
 		type = ir::PTXOperand::DataType::f16;
 	}
 	
-	TestInstruction::ArrayWithSize::ArrayWithSize(fp16x2_t* p, size_t bsz, ir::Dim3 _dim3) {
+	TestInstruction::ArrayWithSize::ArrayWithSize(half2* p, size_t bsz, ir::Dim3 _dim3) {
 		array.p_f16x2 = p;
 		bytesize = bsz;
 		dim3 = _dim3;
@@ -130,7 +129,7 @@ namespace test {
 			}
 			case ir::PTXOperand::DataType::f16x2: {
 				bool equal = true;
-				for (size_t i = 0; i < bytesize / sizeof(fp16x2_t); i++) {
+				for (size_t i = 0; i < bytesize / sizeof(half2); i++) {
 					bool result = (fabs(this->array.p_f16x2[i].x - other.array.p_f16x2[i].x) < THERESHOLD) && (fabs(this->array.p_f16x2[i].y - other.array.p_f16x2[i].y) < THERESHOLD);
 					if (!result) {
 						equal = false;
@@ -232,9 +231,9 @@ namespace test {
 			boost::random::uniform_real_distribution<float> dist(-100.0f, 100.0f);
 			return __half(dist(random));
 		}
-		else if constexpr (std::is_same_v<T, fp16x2_t>) {
+		else if constexpr (std::is_same_v<T, half2>) {
 			boost::random::uniform_real_distribution<float> dist(-100.0f, 100.0f);
-			return fp16x2_t(__half(dist(random)), __half(dist(random)));
+			return half2(__half(dist(random)), __half(dist(random)));
 		}
 		else {
 			// Unsupported 
@@ -267,7 +266,7 @@ namespace test {
 				break;
 			}
 			case ir::PTXOperand::DataType::f16x2: {
-				newArray.array.p_f16x2 = new fp16x2_t[bytesize / sizeof(fp16x2_t)];
+				newArray.array.p_f16x2 = new half2[bytesize / sizeof(half2)];
 				std::memcpy(newArray.array.p_f16x2, array.array.p_f16x2, bytesize);
 				break;
 			}
@@ -326,7 +325,11 @@ namespace test {
 			}
 			case ir::PTXOperand::DataType::f16x2:
 			{
-				
+				bytesize = size * sizeof(half2);
+				half2* p = new half2[size];
+				if (random) _randomArray(p, size);
+				else memset(p, 0, bytesize);
+				return ArrayWithSize(p, bytesize, dim);
 			}
 			case ir::PTXOperand::DataType::f64:
 			{
@@ -425,7 +428,9 @@ namespace test {
 			case ir::PTXOperand::DataType::f16x2: {
 				auto array = _allocArray(ir::PTXOperand::DataType::f16x2, ir::Dim3(values.size()), false);
 				for (size_t i = 0; i < values.size(); ++i) {
-					array.array.p_f16x2[i] = values[i].f16x2;
+					auto value = int32ToHalf2(values[i].f16x2);
+					array.array.p_f16x2[i].x = value.x;
+					array.array.p_f16x2[i].y = value.y;
 				}
 				return array;
 			}
@@ -483,7 +488,9 @@ namespace test {
 			}
 			case ir::PTXOperand::DataType::f16x2: {
 				for (size_t i = 0; i < values.size(); ++i) {
-					array.array.p_f16x2[i] = values[i].f16x2;
+					auto value = int32ToHalf2(values[i].f16x2);
+					array.array.p_f16x2[i].x = value.x;
+					array.array.p_f16x2[i].y = value.y;
 				}
 				break;
 			}
@@ -544,7 +551,7 @@ namespace test {
 			}
 			case ir::PTXOperand::DataType::f16x2: {
 				for (size_t i = 0; i < array.dim3.size(); ++i) {
-					std::cout << "[" << array.array.p_f16x2[i].x << array.array.p_f16x2[i].y << "] ";
+					std::cout << "[" << array.array.p_f16x2[i].x << " , " << array.array.p_f16x2[i].y << "] ";
 				}
 				std::cout << std::endl;
 				break;
@@ -619,6 +626,15 @@ namespace test {
 			}
 		}
 		return true;
+	}
+	half2 TestInstruction::int32ToHalf2(int32_t a) {
+		half2 h2;
+		// store to half2, x = a[31,...,16], y = a[15,...,0]
+		int16_t x = a >> 16;
+		int16_t y = a & 0xffff;
+		h2.x = *(reinterpret_cast<half*>(reinterpret_cast<void*>(&x)));
+		h2.y = *(reinterpret_cast<half*>(reinterpret_cast<void*>(&y)));
+		return h2;
 	}
 
 	template<typename T>
