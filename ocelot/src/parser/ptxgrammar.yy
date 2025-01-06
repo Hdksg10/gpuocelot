@@ -855,7 +855,7 @@ optionalFloatRounding : floatRounding | /* empty string */;
 instruction : ftzInstruction2 | ftzInstruction3 | approxInstruction2 
 	| basicInstruction3 | bfe | bfi | bfind | brev | branch | addOrSub
 	| addCOrSubC | atom | bar | brkpt | clz | cvt | cvta | isspacep | div | exit
-	| ld | ldu | mad | mad24 | madc | membar | mov | mul24 | mul | notInstruction
+	| ld | ldu | mad | fma | mad24 | madc | membar | mov | mul24 | mul | notInstruction
 	| pmevent | popc | prefetch | prefetchu | prmt | rcpSqrtInstruction | red
 	| ret | sad | selp | set | setp | slct | st | suld | suq | sured | sust
 	| testp | tex | tld4 | trap | txq | vote | shfl | shf | lop3 | dp4a | dp2a;
@@ -1220,9 +1220,20 @@ mulModifier : optionalFtz optionalSaturate
 	state.carry( false );
 };
 
-madOpcode : OPCODE_MAD | OPCODE_FMA;
+// madOpcode : OPCODE_MAD | OPCODE_FMA;
 
-mad : madOpcode mulModifier dataType operand ',' operand 
+mad : OPCODE_MAD mulModifier dataType operand ',' operand 
+	',' operand ',' operand ';'
+{
+	state.instruction( $<text>1, $<value>3 );
+};
+
+fmaModifier : TOKEN_RN optionalFtz optionalSaturate
+{
+	state.modifier($<value>1);
+};
+
+fma: OPCODE_FMA fmaModifier dataType operand ',' operand 
 	',' operand ',' operand ';'
 {
 	state.instruction( $<text>1, $<value>3 );

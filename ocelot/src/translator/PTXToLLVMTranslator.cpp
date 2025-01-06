@@ -3464,68 +3464,160 @@ void PTXToLLVMTranslator::_translateMad( const ir::PTXInstruction& i )
 {
 	if( ir::PTXOperand::isFloat( i.type ) )
 	{
-		ir::LLVMFmul mul;
-		ir::LLVMFadd add;
+		if ( ir::PTXOperand::f16x2 == i.type) {
+			bool isFtz = (i.modifier & ir::PTXInstruction::ftz);
+			bool isSat = (i.modifier & ir::PTXInstruction::sat);
+			ir::LLVMFmul mul;
+			ir::LLVMFadd add;
+			auto a = _translate( i.a );
+			auto b = _translate( i.b );
+			auto c = _translate( i.c );
+			auto d = _translate( i.d );
+			// PTX alaways ld/st f16x2 registers as u32
+			ir::LLVMBitcast cast;
+			cast.a = a;
+			cast.d.name = _tempRegister();
+			cast.d.type.category = ir::LLVMInstruction::Type::Vector;
+			cast.d.type.type = ir::LLVMInstruction::DataType::F16;
+			cast.d.type.vector = 2;
+			mul.a = cast.d;
+			_add( cast );
+			cast.a = b;
+			cast.d.name = _tempRegister();
+			mul.b = cast.d;
+			_add( cast );
+			mul.d.name = _tempRegister();
+			mul.d.type = mul.a.type;
 
-		ir::LLVMInstruction::Operand result = _destination( i );
-
-		if( i.modifier & ir::PTXInstruction::ftz )
-		{
-			mul.a = ir::LLVMInstruction::Operand( _tempRegister(), 
-				ir::LLVMInstruction::Type( ir::LLVMInstruction::F32, 
-				ir::LLVMInstruction::Type::Element ) );
-			mul.b = ir::LLVMInstruction::Operand( _tempRegister(), 
-				ir::LLVMInstruction::Type( ir::LLVMInstruction::F32, 
-				ir::LLVMInstruction::Type::Element ) );
-			
-			_flushToZero( mul.a, _translate( i.a ) );
-			_flushToZero( mul.b, _translate( i.b ) );
-		}
-		else
-		{
-			mul.a = _translate( i.a );
-			mul.b = _translate( i.b );
-		}
-		
-		if( i.modifier & ir::PTXInstruction::sat
-			|| i.modifier & ir::PTXInstruction::ftz )
-		{
-			add.d = mul.a;
+			cast.a = c;
+			cast.d.name = _tempRegister();
+			_add(cast);
+			add.a = mul.d;
+			add.b = cast.d;
 			add.d.name = _tempRegister();
-		}
-		else
-		{
-			add.d = result;
-		}
-		
-		mul.d = add.d;
-		mul.d.name = _tempRegister();
+			add.d.type = add.a.type;
 
-		_add( mul );
+			if (isFtz) {
+				auto a_ftz = ir::LLVMInstruction::Operand( _tempRegister(), mul.a.type );
+				auto b_ftz = ir::LLVMInstruction::Operand( _tempRegister(), mul.b.type );
+				auto c_ftz = ir::LLVMInstruction::Operand( _tempRegister(), add.b.type );
+				_flushToZeroFp16x2(a_ftz, mul.a);
+				_flushToZeroFp16x2(b_ftz, mul.b);
+				_flushToZeroFp16x2(c_ftz, add.b);
+				mul.a = a_ftz;
+				mul.b = b_ftz;
+				add.b = c_ftz;
+			}
+			_add( mul );
+			_add( add );
 
-		add.a = mul.d;
-		add.b = _translate( i.c );
-		
-		_add( add );
-
-		if( i.modifier & ir::PTXInstruction::sat )
-		{
-			if( i.modifier & ir::PTXInstruction::ftz )
+			// prepare temp registers as operands
+			std::vector<ir::LLVMInstruction::Operand> operands;
+			operands.push_back(add.d);
+			for ( int i = 0; i < (isFtz + isSat + 1) - 1; i++ )
 			{
-				ir::LLVMInstruction::Operand temp =
-					ir::LLVMInstruction::Operand( _tempRegister(),
-					add.d.type );
-				_saturate( temp, add.d );
-				_flushToZero( result, temp );
+				operands.push_back( ir::LLVMInstruction::Operand( _tempRegister(), add.a.type ) );
+			}
+			operands.push_back(d);
+			int idx = 0;
+			if ( isFtz )
+			{
+				_flushToZeroFp16x2( operands[idx+1], operands[idx]);
+				idx++;
+			}
+			if ( isSat )
+			{
+				_saturateFp16x2( operands[idx+1], operands[idx]);
+				idx++;
+			}
+			cast.a = operands[idx];
+			cast.d = operands[idx+1];
+			_add( cast );
+			// TODO: why _bitcast function failed
+			// _bitcast( operands[idx+1], operands[idx] );
+			idx++;
+		}
+		else {
+			bool isF16 = (ir::PTXOperand::f16 == i.type);
+			bool isFtz = (i.modifier & ir::PTXInstruction::ftz);
+			bool isSat = (i.modifier & ir::PTXInstruction::sat);
+			// should we do anything special to fadd result?
+			bool needHandle = isSat || isFtz || isF16;
+			ir::LLVMFmul mul;
+			ir::LLVMFadd add;
+			
+			ir::LLVMInstruction::Operand result = _destination( i );
+			auto a = _translate( i.a );
+			auto b = _translate( i.b );
+			auto c = _translate( i.c );
+
+			mul.a = a;
+			mul.b = b;
+			add.b = c;
+			if ( isF16 ) {
+				// PTX alaways ld/st f16 registers as u16
+				ir::LLVMBitcast cast;
+				if ( ir::LLVMInstruction::DataType::F16 != mul.a.type.type ) {
+					cast.a = mul.a;
+					cast.d = mul.a;
+					cast.d.name = _tempRegister();
+					cast.d.type = mul.a.type;
+					cast.d.type.type = ir::LLVMInstruction::DataType::F16;
+					_add( cast );
+					mul.a = cast.d;
+				}
+				if ( ir::LLVMInstruction::DataType::F16 != mul.b.type.type ) {
+					cast.a = mul.b;
+					cast.d = mul.b;
+					cast.d.name = _tempRegister();
+					cast.d.type = mul.b.type;
+					cast.d.type.type = ir::LLVMInstruction::DataType::F16;
+					_add( cast );
+					mul.b = cast.d;
+				}
+				if ( ir::LLVMInstruction::DataType::F16 != add.b.type.type ) {
+					cast.a = add.b;
+					cast.d = add.b;
+					cast.d.name = _tempRegister();
+					cast.d.type = add.b.type;
+					cast.d.type.type = ir::LLVMInstruction::DataType::F16;
+					_add( cast );
+					add.b = cast.d;
+				}
+			}
+
+			// flush subnormal inputs to zero
+			if ( isFtz )
+			{
+				auto a_ftz = ir::LLVMInstruction::Operand( _tempRegister(), mul.a.type );
+				auto b_ftz = ir::LLVMInstruction::Operand( _tempRegister(), mul.b.type );
+				auto c_ftz = ir::LLVMInstruction::Operand( _tempRegister(), add.b.type );
+				_flushToZero(a_ftz, mul.a, isF16);
+				_flushToZero(b_ftz, mul.b, isF16);
+				_flushToZero(c_ftz, add.b, isF16);
+				mul.a = a_ftz;
+				mul.b = b_ftz;
+				add.b = c_ftz;
+			}
+			mul.d.name = _tempRegister();
+			mul.d.type = mul.a.type;
+
+			_add(mul);
+			add.a = mul.d;
+
+			if( needHandle )
+			{
+				add.d = add.a;
+				add.d.name = _tempRegister();
 			}
 			else
 			{
-				_saturate( result, add.d );
+				add.d = result;
 			}
-		}
-		else if( i.modifier & ir::PTXInstruction::ftz )
-		{
-			_flushToZero( result, add.d );
+			_add( add );
+			if ( needHandle ) {
+				_handleModifier(result, add.d, isFtz, isSat, isF16);
+			}
 		}
 	}
 	else
@@ -5062,60 +5154,135 @@ void PTXToLLVMTranslator::_translateMul( const ir::PTXInstruction& i )
 {
 	if( ir::PTXOperand::isFloat( i.type ) )
 	{
-		ir::LLVMFmul mul;
-	
-		ir::LLVMInstruction::Operand result = _destination( i );
+		if ( ir::PTXOperand::f16x2 == i.type) {
+			bool isFtz = (i.modifier & ir::PTXInstruction::ftz);
+			bool isSat = (i.modifier & ir::PTXInstruction::sat);
 
-		if( i.modifier & ir::PTXInstruction::ftz )
-		{
-			mul.a = ir::LLVMInstruction::Operand( _tempRegister(), 
-				ir::LLVMInstruction::Type( ir::LLVMInstruction::F32, 
-				ir::LLVMInstruction::Type::Element ) );
-			mul.b = ir::LLVMInstruction::Operand( _tempRegister(), 
-				ir::LLVMInstruction::Type( ir::LLVMInstruction::F32, 
-				ir::LLVMInstruction::Type::Element ) );
-			
-			_flushToZero( mul.a, _translate( i.a ) );
-			_flushToZero( mul.b, _translate( i.b ) );
-		}
-		else
-		{
-			mul.a = _translate( i.a );
-			mul.b = _translate( i.b );
-		}
-		
-		if( i.modifier & ir::PTXInstruction::sat
-			|| i.modifier & ir::PTXInstruction::ftz )
-		{
-			mul.d = ir::LLVMInstruction::Operand( _tempRegister(), 
-				ir::LLVMInstruction::Type( ir::LLVMInstruction::F32, 
-				ir::LLVMInstruction::Type::Element ) );
-		}
-		else
-		{
-			mul.d = result;
-		}
+			ir::LLVMFmul mul;
+			auto a = _translate( i.a );
+			auto b = _translate( i.b );
+			auto d = _translate(i.d);
+			// PTX alaways ld/st f16x2 registers as u32
+			ir::LLVMBitcast cast;
+			cast.a = a;
+			cast.d.name = _tempRegister();
+			cast.d.type.category = ir::LLVMInstruction::Type::Vector;
+			cast.d.type.type = ir::LLVMInstruction::DataType::F16;
+			cast.d.type.vector = 2;
+			mul.a = cast.d;
+			_add( cast );
+			cast.a = b;
+			cast.d.name = _tempRegister();
+			mul.b = cast.d;
+			_add( cast );
 
-		_add( mul );
-		
-		if( i.modifier & ir::PTXInstruction::sat )
-		{
-			if( i.modifier & ir::PTXInstruction::ftz )
+			mul.d.name = _tempRegister();
+			mul.d.type = mul.a.type;
+
+			if (isFtz) {
+				auto a_ftz = ir::LLVMInstruction::Operand( _tempRegister(), mul.a.type );
+				auto b_ftz = ir::LLVMInstruction::Operand( _tempRegister(), mul.b.type );
+				_flushToZeroFp16x2(a_ftz, mul.a);
+				_flushToZeroFp16x2(b_ftz, mul.b);
+				mul.a = a_ftz;
+				mul.b = b_ftz;
+			}
+
+			_add( mul );
+
+			// prepare temp registers as operands
+			std::vector<ir::LLVMInstruction::Operand> operands;
+			operands.push_back(mul.d);
+			for ( int i = 0; i < (isFtz + isSat + 1) - 1; i++ )
 			{
-				ir::LLVMInstruction::Operand temp =
-					ir::LLVMInstruction::Operand( _tempRegister(),
-					mul.d.type );
-				_saturate( temp, mul.d );
-				_flushToZero( result, temp );
+				operands.push_back( ir::LLVMInstruction::Operand( _tempRegister(), mul.a.type ) );
+			}
+			operands.push_back(d);
+			int idx = 0;
+			if ( isFtz )
+			{
+				_flushToZeroFp16x2( operands[idx+1], operands[idx]);
+				idx++;
+			}
+			if ( isSat )
+			{
+				_saturateFp16x2( operands[idx+1], operands[idx]);
+				idx++;
+			}
+			cast.a = operands[idx];
+			cast.d = operands[idx+1];
+			_add( cast );
+			// TODO: why _bitcast function failed
+			// _bitcast( operands[idx+1], operands[idx] );
+			idx++;
+		}
+		else {
+			bool isF16 = (ir::PTXOperand::f16 == i.type);
+			bool isFtz = (i.modifier & ir::PTXInstruction::ftz);
+			bool isSat = (i.modifier & ir::PTXInstruction::sat);
+			// should we do anything special to fadd result?
+			bool needHandle = isSat || isFtz || isF16;
+
+			ir::LLVMFmul mul;
+			
+			ir::LLVMInstruction::Operand result = _destination( i );
+			auto a = _translate( i.a );
+			auto b = _translate( i.b );
+			mul.a = a;
+			mul.b = b;
+
+
+			if( needHandle )
+			{
+				mul.d = mul.a;
+				mul.d.name = _tempRegister();
 			}
 			else
 			{
-				_saturate( result, mul.d );
+				mul.d = result;
 			}
-		}
-		else if( i.modifier & ir::PTXInstruction::ftz )
-		{
-			_flushToZero( result, mul.d );
+			if ( isF16 ) {
+				// PTX alaways ld/st f16 registers as u16
+				if ( (ir::LLVMInstruction::DataType::F16 != mul.a.type.type) ||
+				(ir::LLVMInstruction::DataType::F16 != mul.b.type.type) ) {
+					ir::LLVMBitcast cast;
+					if ( ir::LLVMInstruction::DataType::F16 != mul.a.type.type ) {
+						cast.a = mul.a;
+						cast.d = mul.a;
+						cast.d.name = _tempRegister();
+						cast.d.type = mul.a.type;
+						cast.d.type.type = ir::LLVMInstruction::DataType::F16;
+						_add( cast );
+						mul.a = cast.d;
+					}
+					if ( ir::LLVMInstruction::DataType::F16 != mul.b.type.type ) {
+						cast.a = mul.b;
+						cast.d = mul.b;
+						cast.d.name = _tempRegister();
+						cast.d.type = mul.b.type;
+						cast.d.type.type = ir::LLVMInstruction::DataType::F16;
+						_add( cast );
+						mul.b = cast.d;
+					}
+				}
+				mul.d.name = _tempRegister();
+				mul.d.type.type = ir::LLVMInstruction::DataType::F16;
+
+			}
+			// flush subnormal inputs to zero
+			if ( isFtz )
+			{
+				auto a_ftz = ir::LLVMInstruction::Operand( _tempRegister(), mul.a.type );
+				auto b_ftz = ir::LLVMInstruction::Operand( _tempRegister(), mul.b.type );
+				_flushToZero(a_ftz, mul.a, isF16);
+				_flushToZero(b_ftz, mul.b, isF16);
+				mul.a = a_ftz;
+				mul.b = b_ftz;
+			}
+			_add( mul );
+			if ( needHandle ) {
+				_handleModifier(result, mul.d, isFtz, isSat, isF16);
+			}
 		}
 	}
 	else

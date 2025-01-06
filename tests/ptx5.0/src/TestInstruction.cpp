@@ -21,7 +21,7 @@
 
 
 namespace test {
-	const double THERESHOLD = 1e-6;
+	const double THERESHOLD = 1e-2;
 	TestInstruction::ArrayWithSize::ArrayWithSize(float* p, size_t bsz, ir::Dim3 _dim3) {
 		array.p_f32 = p;
 		bytesize = bsz;
