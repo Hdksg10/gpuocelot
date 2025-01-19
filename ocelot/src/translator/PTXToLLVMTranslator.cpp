@@ -2803,6 +2803,7 @@ void PTXToLLVMTranslator::_translateCvta( const ir::PTXInstruction& i )
 	{
 		switch( i.addressSpace )
 		{
+		case ir::PTXInstruction::Const:  /* fall through */
 		case ir::PTXInstruction::Shared: /* fall through */
 		case ir::PTXInstruction::Local:
 		{
@@ -2939,6 +2940,7 @@ void PTXToLLVMTranslator::_translateIsspacep( const ir::PTXInstruction& i )
 {
 	switch( i.addressSpace ) 
 	{
+	case ir::PTXInstruction::Const:  // fall through
 	case ir::PTXInstruction::Shared: // fall through
 	case ir::PTXInstruction::Local:
 	{

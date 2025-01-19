@@ -1143,6 +1143,11 @@ unsigned int OCELOT_INTRINSIC __ocelot_get_extent(
 			report("Shared memory size is " << state->sharedSize);
 			return state->sharedSize;
 		}
+		case ir::PTXInstruction::Const:
+		{
+			report("Const memory size is " << state->constantSize);
+			return state->constantSize;
+		}
 		default: assertM( false, "Invalid memory space." );
 	}
 	

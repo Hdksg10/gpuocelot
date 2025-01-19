@@ -969,7 +969,8 @@ std::string ir::PTXInstruction::valid() const {
 		case Isspacep: {
 			if (!(addressSpace == PTXInstruction::Global
 				|| addressSpace == PTXInstruction::Shared
-				|| addressSpace == PTXInstruction::Local)) {
+				|| addressSpace == PTXInstruction::Local
+				|| addressSpace == PTXInstruction::Const )) {
 				return "invalid address space " + toString(addressSpace);
 			}
 			if (!(d.addressMode == PTXOperand::Register

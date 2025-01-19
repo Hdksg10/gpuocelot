@@ -25,7 +25,7 @@ PTXKernelConfig::PTXKernelConfig(std::string path) {
         // if (main.find("blocks")) {
         //     blocks = initialize_dim3(main["blocks"]);
         // }
-        threads = initialize_dim3(main["trheads"]);
+        threads = initialize_dim3(main["threads"]);
         blocks = initialize_dim3(main["blocks"]);
         kernelName = main.parse<std::string> ("kernel", "invalid_kernel_name");
         destinationIdx =  main.parse<int> ("dest", 0);
@@ -87,9 +87,12 @@ PTXKernelConfig::PTXKernelConfig(std::string path) {
 
 ir::Dim3 PTXKernelConfig::initialize_dim3(hydrazine::json::Visitor vistor) {
     int x, y, z;
-    x = vistor.parse<int>("x", 1);
-    y = vistor.parse<int>("y", 1);
-    z = vistor.parse<int>("z", 1);
+    auto xVistor = vistor["x"];
+    auto yVistor = vistor["y"];
+    auto zVistor = vistor["z"];
+    x = xVistor.value->as_integer();
+    y = yVistor.value->as_integer();
+    z = zVistor.value->as_integer();
     return ir::Dim3(x, y ,z);
 }
 

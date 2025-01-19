@@ -24,6 +24,7 @@
 #include <ocelot/transforms/ConvertPredicationToSelectPass.h>
 #include <ocelot/translator/PTXToLLVMTranslator.h>
 #include <ocelot/ir/LLVMKernel.h>
+#include <ocelot/executive/MulticoreCPUDevice.h>
 #include <boost/random.hpp>
 #include <ocelot/ir/Dim3.h>
 #include <ocelot/ir/PTXOperand.h>
@@ -31,6 +32,12 @@
 #include <ocelot/executive/LLVMExecutableKernel.h>
 #include <ptx_test/PTXKernelConfig.h>
 #include <ptx_test/Instructions.h>
+
+#define CUDA_CHECK(f, msg) \
+	if ((r = f) != CUDA_SUCCESS) { \
+		status << msg << r;  \
+		return false;            \
+	}   
 
 namespace test {
     class TestInstruction : public Test
@@ -74,6 +81,7 @@ namespace test {
 			
 			bool _runPTXKernel(std::vector<ArrayWithSize> args);
 			bool _runLLVMKernel(std::vector<ArrayWithSize> args);
+			bool _runLLVMKernel_v2(std::vector<ArrayWithSize> args);
 			bool _runPTXTest();
 			bool runPTXTest();
 

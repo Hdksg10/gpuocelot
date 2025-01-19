@@ -11,14 +11,7 @@
 #undef REPORT_BASE
 #endif
 
-#define REPORT_BASE 2
-
-#define CUDA_CHECK(f, msg) \
-	if ((r = f) != CUDA_SUCCESS) { \
-		status << msg << r;  \
-		return false;            \
-	}                            
-
+#define REPORT_BASE 2                         
 
 namespace test {
 	const double THERESHOLD = 1e-2;
@@ -750,7 +743,7 @@ namespace test {
 		return true;
 	}
 
-	bool TestInstruction::_runLLVMKernel(std::vector<ArrayWithSize> args) {
+	bool TestInstruction::_runLLVMKernel_v2(std::vector<ArrayWithSize> args) {
 		auto _config = *config;
 		bool result = true;
 		bool loaded = false;
@@ -822,6 +815,9 @@ namespace test {
 			params.push_back(executableKerel->getParameter(paramName));
 			
 		}
+
+		executableKerel->updateMemory();
+
 		// set parameter values
 		for (int i = 0; i < params.size(); i++) {
 			auto p = params[i];
@@ -832,14 +828,98 @@ namespace test {
 		}
 		executableKerel->updateArgumentMemory();
 
-		executableKerel->setKernelShape( 1, 1, 1 );
+		executableKerel->setKernelShape( _config.threads.x, _config.threads.y, _config.threads.z );
 		executableKerel->launchGrid( _config.blocks.x, _config.blocks.y, _config.blocks.z );
 
 		return result;
 	}
+	bool TestInstruction::_runLLVMKernel(std::vector<ArrayWithSize> args) {
+		auto _config = *config;
+		auto device = executive::MulticoreCPUDevice();
 
+		bool result = true;
+		bool loaded = true;
+		// load kernel function
+		try {
+			loaded = module.load(input);
+			device.load(&module);
+		}
+		catch(const hydrazine::Exception& e) {
+			status << " error - " << e.what() << "\n";
+		}
+		if(!loaded) {
+			status << "failed to load module '" << input << "'\n";
+			return (result = false);
+		}
+		kernel = module.getKernel(_config.kernelName);
+		if (!kernel) {
+			status << "failed to get kernel\n";
+			return (result = false);
+		}
+
+		// output translated llvm kernel
+		if (output) {
+			
+			transforms::PassManager manager(&module);
+
+			transforms::ConvertPredicationToSelectPass pass1;
+			transforms::RemoveBarrierPass pass2;
+			translator::PTXToLLVMTranslator translator;
+
+			manager.addPass(&pass1);
+			manager.addPass(&pass2);
+
+			manager.runOnKernel(*kernel);
+			manager.releasePasses();
+			
+			manager.addPass(&translator);
+			manager.runOnKernel(*kernel);
+			manager.releasePasses();
+
+			ir::LLVMKernel* translatedKernel = dynamic_cast< ir::LLVMKernel* >( 
+				translator.translatedKernel() );
+			translatedKernel->assemble();
+			
+			std::string outputFile = input + "." + kernel->name + ".ll";
+		
+			if( output )
+			{
+				std::ofstream outFile( outputFile.c_str() );
+				outFile << translatedKernel->code();
+				outFile << "\n";
+				outFile.close();
+			}
+			
+			delete translatedKernel;
+		}
+
+
+		// set parameter blocks
+		size_t size = 0;
+		constexpr size_t PARAMS_BUFFER_SIZE = 64;
+		void* params[PARAMS_BUFFER_SIZE];
+
+		// we assume every parameter is pointer
+		for (int i = 0; i < args.size(); i++) {
+			auto arg = args[i];
+			params[i] = ArrayWithSize::getPointer(arg);
+		}
+		size = args.size() * sizeof(void*);
+		int level = api::OcelotConfiguration::get().executive.optimizationLevel;
+
+
+		device.launch(module.id(), kernel->name, _config.blocks, _config.threads, 0, params, size);
+
+		return result;
+	}
 	bool TestInstruction::_runPTXTest() {
 		auto _config = *config;
+		if (verbose) {
+			std::cout << "========= " << _config.kernelName << " =========" << std::endl;
+			// print grid and block dim3 in config
+			std::cout << "Grid Dim3: " << _config.blocks.x << ", " << _config.blocks.y << ", " << _config.blocks.z << std::endl;
+			std::cout << "Block Dim3: " << _config.threads.x << ", " << _config.threads.y << ", " << _config.threads.z << std::endl;
+		}
 		bool result = true;
 		std::vector<ArrayWithSize> args;
 		ArrayWithSize d = _allocArray(_config.paramVector[_config.destinationIdx], _config.sizeVector[_config.destinationIdx]);
@@ -881,6 +961,7 @@ namespace test {
 		} 
 		bool equal = (d == d_cuda);
 		if (!equal || verbose) {
+			std::cout << "========= " << "Test result" << " =========" << std::endl;
 			if (!equal) {
 				std::cout << "Error when check correcty" << std::endl;
 			}
@@ -911,9 +992,6 @@ namespace test {
 	bool TestInstruction::runPTXTest() {
 		bool result = true;
 		for (auto&& _config:configs){
-			if (verbose) {
-				std::cout << "Running test: " << _config.kernelName << std::endl;
-			}
 			config = &_config;
 			bool r = _runPTXTest();
 			if (verbose) {
