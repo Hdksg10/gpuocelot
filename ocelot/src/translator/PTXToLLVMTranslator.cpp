@@ -6333,29 +6333,116 @@ void PTXToLLVMTranslator::_translateSet( const ir::PTXInstruction& i )
 		cast.d = d;
 		_add( cast );
 	}
-	// else if ( ir::PTXOperand::f16x2 == i.type) 
-	// {
-
-	// }
 }
 
 void PTXToLLVMTranslator::_translateSetP( const ir::PTXInstruction& i )
 {
+
+	bool isF16 = i.type == ir::PTXOperand::f16;
+	bool isF16X2 = i.type == ir::PTXOperand::f16x2;
+	bool isFtz = i.modifier & ir::PTXInstruction::ftz;
+
 	ir::LLVMInstruction::Operand d = _destination( i );
 	ir::LLVMInstruction::Operand tempD = d;
-
-	if( i.c.addressMode == ir::PTXOperand::Register )
+	ir::LLVMInstruction::Operand temp; // used when f16x2
+	if( i.c.addressMode == ir::PTXOperand::Register)
 	{
 		tempD.name = _tempRegister();
 	}
 
-	if( ir::PTXOperand::isFloat( i.a.type ) )
+	if (isF16X2)
+	{
+		ir::LLVMFcmp fcmp;
+		temp.name = _tempRegister();
+		temp.type.category = ir::LLVMInstruction::Type::Vector;
+		temp.type.vector = 2;
+		temp.type.type = ir::LLVMInstruction::I1;
+		fcmp.d = temp;
+
+		// PTX alaways ld/st f16x2 registers as u32
+		ir::LLVMBitcast cast;
+		cast.d.type.category = ir::LLVMInstruction::Type::Vector;
+		cast.d.type.type = ir::LLVMInstruction::DataType::F16;
+		cast.d.type.vector = 2;
+
+		cast.a = _translate( i.a );
+		cast.d.name = _tempRegister();
+		_add( cast );
+		if (isFtz) 
+		{	
+			fcmp.a.name = _tempRegister();
+			fcmp.a.type = cast.d.type;
+			_flushToZeroFp16x2(fcmp.a, cast.d);
+		}
+		else
+		{
+			fcmp.a = cast.d;
+		}
+
+		cast.a = _translate( i.b );
+		cast.d.name = _tempRegister();
+		_add( cast );
+		if (isFtz) 
+		{	
+			fcmp.b.name = _tempRegister();
+			fcmp.b.type = cast.d.type;
+			_flushToZeroFp16x2(fcmp.b, cast.d);
+		}
+		else
+		{
+			fcmp.b = cast.d;
+		}
+
+		fcmp.comparison = _translate( i.comparisonOperator, false, false );
+		_add( fcmp );
+	}
+	else if( ir::PTXOperand::isFloat( i.a.type ) || isF16)
 	{
 		ir::LLVMFcmp fcmp;
 		
-		fcmp.d = tempD;
-		fcmp.a = _translate( i.a );
-		fcmp.b = _translate( i.b );
+		if (isF16) {
+			fcmp.d = tempD;
+			// PTX alaways ld/st f16 registers as u16
+			ir::LLVMBitcast cast;
+			cast.a = _translate( i.a );
+			cast.a.type.type = ir::LLVMInstruction::DataType::I16;
+			cast.d.name = _tempRegister();
+			cast.d.type = cast.a.type;
+			cast.d.type.type = ir::LLVMInstruction::DataType::F16;
+			
+			_add( cast );
+			if (isFtz) 
+			{	
+				fcmp.a.name = _tempRegister();
+				fcmp.a.type = cast.d.type;
+				_flushToZeroFp16(fcmp.a, cast.d);
+			}
+			else 
+			{	
+				fcmp.a = cast.d;
+			}
+
+			cast.a = _translate( i.b );
+			cast.d.name = _tempRegister();
+			cast.d.type = cast.a.type;
+			cast.d.type.type = ir::LLVMInstruction::DataType::F16;
+			_add( cast );
+			if (isFtz) 
+			{
+				fcmp.b.name = _tempRegister();
+				fcmp.b.type = cast.d.type;
+				_flushToZeroFp16(fcmp.b, cast.d);
+			}
+			else 
+			{	
+				fcmp.b = cast.d;
+			}
+		}
+		else {
+			fcmp.d = tempD;
+			fcmp.a = _translate( i.a );
+			fcmp.b = _translate( i.b );
+		}
 		fcmp.comparison = _translate( i.comparisonOperator, false, false );
 		
 		_add( fcmp );
@@ -6375,29 +6462,54 @@ void PTXToLLVMTranslator::_translateSetP( const ir::PTXInstruction& i )
 	
 	ir::LLVMInstruction::Operand pd = d;
 	ir::LLVMInstruction::Operand pq;
-	ir::LLVMXor Not;
+	ir::LLVMInstruction::Operand tempQ;
+
 
 	if( i.pq.addressMode != ir::PTXOperand::Invalid )
 	{
 		pq = _translate( i.pq );
-
+		
 		if( i.c.addressMode == ir::PTXOperand::Register )
 		{
-			Not.d = tempD;
-			Not.d.name = _tempRegister();
+			tempQ = tempD;
+			tempQ.name = _tempRegister();
 		}
 		else
 		{
-			Not.d = pq;
+			tempQ = pq;
 		}
-
-		Not.a = tempD;
-		Not.b.type.category = ir::LLVMInstruction::Type::Element;
-		Not.b.type.type = ir::LLVMInstruction::I1;
-		Not.b.constant = true;
-		Not.b.i1 = true;
-	
-		_add( Not );
+		
+		// for f16x2: p = BoolOp(t[0], c), q = BoolOp(t[1], c);
+		if (isF16X2) 
+		{
+			ir::LLVMExtractelement extract;
+			extract.a = temp;
+			extract.b.type.type = ir::LLVMInstruction::I32;
+			extract.b.type.category = ir::LLVMInstruction::Type::Element;
+			extract.b.constant = true;
+			extract.b.i32 = 0;
+			extract.d = tempD;
+			_add( extract );
+			
+			extract.b.type.type = ir::LLVMInstruction::I32;
+			extract.b.type.category = ir::LLVMInstruction::Type::Element;
+			extract.b.constant = true;
+			extract.b.i32 = 1;
+			extract.d = tempQ;
+			_add( extract );
+		}
+		// for other types: q = BoolOp(!t, c);
+		else 
+		{
+			ir::LLVMXor Not;
+			Not.a = tempD;
+			Not.b.type.category = ir::LLVMInstruction::Type::Element;
+			Not.b.type.type = ir::LLVMInstruction::I1;
+			Not.b.constant = true;
+			Not.b.i1 = true;
+			Not.d = tempQ;
+			_add( Not );
+		}
 	}
 	
 	if( i.c.addressMode == ir::PTXOperand::Register )
@@ -6418,7 +6530,7 @@ void PTXToLLVMTranslator::_translateSetP( const ir::PTXInstruction& i )
 				if( i.pq.addressMode != ir::PTXOperand::Invalid )
 				{
 					And.d = pq;
-					And.b = Not.d;
+					And.b = tempQ;
 				
 					_add( And );
 				}
@@ -6437,7 +6549,7 @@ void PTXToLLVMTranslator::_translateSetP( const ir::PTXInstruction& i )
 				if( i.pq.addressMode != ir::PTXOperand::Invalid )
 				{
 					Or.d = pq;
-					Or.b = Not.d;
+					Or.b = tempQ;
 				
 					_add( Or );
 				}
@@ -6456,7 +6568,7 @@ void PTXToLLVMTranslator::_translateSetP( const ir::PTXInstruction& i )
 				if( i.pq.addressMode != ir::PTXOperand::Invalid )
 				{
 					Xor.d = pq;
-					Xor.b = Not.d;
+					Xor.b = tempQ;
 				
 					_add( Xor );
 				}

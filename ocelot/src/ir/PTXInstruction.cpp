@@ -1636,9 +1636,15 @@ std::string ir::PTXInstruction::valid() const {
 				&& type != PTXOperand::u32 && type != PTXOperand::u64
 				&& type != PTXOperand::b16 && type != PTXOperand::b32 
 				&& type != PTXOperand::b64 && type != PTXOperand::f32
-				&& type != PTXOperand::f64 ) {
+				&& type != PTXOperand::f64 && type != PTXOperand::f16 && type != PTXOperand::f16x2) {
 				return "invalid instruction type " 
 					+ PTXOperand::toString( type );
+			}
+			if (type == PTXOperand::f16 && pq.addressMode != PTXOperand::Invalid) {
+				return "setp.f16 does not support predicate Pq";
+			}
+			if (type == PTXOperand::f16x2 && pq.type != PTXOperand::pred) {
+				return "setp.f16x2 requires predicate Pq";
 			}
 			if( !PTXOperand::valid( type, a.type )  ) {
 				return "operand A type " + PTXOperand::toString( a.type ) 

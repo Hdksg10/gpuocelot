@@ -1,0 +1,22 @@
+{
+    "kernel": "_Z20test_setp_f16_boolopPi",
+    "threads" : {
+        "x" : 1,
+        "y" : 1,
+        "z" : 1
+    },
+    "blocks" : {
+        "x" : 1,
+        "y" : 1,
+        "z" : 1
+    },
+    "params" : ["u32"],
+    "dest": 0,
+    "size" : [
+        {
+            "x" : 1,
+            "y" : 1,
+            "z" : 1
+        }
+    ]
+}
