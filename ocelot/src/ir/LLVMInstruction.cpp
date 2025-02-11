@@ -1850,26 +1850,26 @@ namespace ir
 		{
 			return "Source B must be a vector or undef";
 		}
-		if( mask.size() != ( unsigned int ) 2 * d.type.vector )
+		if( mask.size() != ( unsigned int ) 1 * d.type.vector )
 		{
 			std::stringstream stream;
 			stream << "Mask size " << mask.size() 
-				<< " is not twice of vector size " << d.type.vector;
+				<< " is same as vector size " << d.type.vector;
 			return stream.str();
 		}
 		for( Mask::const_iterator fi = mask.begin(); fi != mask.end(); ++fi )
 		{
-			if( *fi >= 2 * d.type.vector )
+			if( *fi >= a.type.vector + b.type.vector )
 			{
 				std::stringstream stream;
 				stream << "For mask element " 
 					<< std::distance( mask.begin(), fi ) << ", index " 
 					<< *fi << " is beyond maximum vector index " 
-					<< ( 2 * d.type.vector );
+					<< ( a.type.vector + b.type.vector );
 				return stream.str();
 			}
 		}
-		return LLVMBinaryInstruction::valid();
+		return "";
 	}
 
 	Instruction* LLVMShufflevector::clone(bool copy) const

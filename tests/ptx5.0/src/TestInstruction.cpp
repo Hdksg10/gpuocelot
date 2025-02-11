@@ -995,7 +995,7 @@ namespace test {
 			config = &_config;
 			bool r = _runPTXTest();
 			if (verbose) {
-				std::cout << "Test result: " << (r ? "PASS" : "FAIL") << std::endl;
+				std::cout << "Test result: " << (r ? "Pass" : "Fail") << std::endl;
 			}
 			result = r && result;
 		}

@@ -205,6 +205,8 @@ protected:
 		const ir::LLVMInstruction::Operand& a, bool fp16 );
 	void _flushToZero( const ir::LLVMInstruction::Operand& d, 
 		const ir::LLVMInstruction::Operand& a );
+	void _flushToZeroFp64( const ir::LLVMInstruction::Operand& d, 
+			const ir::LLVMInstruction::Operand& a );
 	void _flushToZeroFp16( const ir::LLVMInstruction::Operand& d, 
 		const ir::LLVMInstruction::Operand& a );
 	void _flushToZeroFp16x2( const ir::LLVMInstruction::Operand& d, 

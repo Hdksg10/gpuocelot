@@ -1588,23 +1588,32 @@ std::string ir::PTXInstruction::valid() const {
 				&& type != PTXOperand::u32 && type != PTXOperand::u64
 				&& type != PTXOperand::b16 && type != PTXOperand::b32 
 				&& type != PTXOperand::b64 && type != PTXOperand::f32
-				&& type != PTXOperand::f64 ) {
+				&& type != PTXOperand::f64 && type != PTXOperand::f16 && type != PTXOperand::f16x2) {
 				return "invalid instruction type " 
 					+ PTXOperand::toString( type );
 			}
 			if( d.type != PTXOperand::s32 && d.type != PTXOperand::f32 
-				&& d.type != PTXOperand::u32 ) {
+				&& d.type != PTXOperand::u32 && d.type != PTXOperand::b16 && d.type != PTXOperand::b32 ) {
 				return "operand D type " + PTXOperand::toString( d.type ) 
-					+ " invalid (must be u32, s32, or f32)";
+					+ " invalid (must be u32, s32, f16(b16), f16x2(b32) or f32)";
 			}
 			if( c.type != PTXOperand::pred && 
 				c.addressMode != PTXOperand::Invalid ) {
 				return "operand C type " + PTXOperand::toString( c.type ) 
 					+ " must be a predicate.";
 			}
+			// However, in new ISA, f16x2 and other type can be used as source or destination in single instruction.
+			if (type == PTXOperand::f16x2 && (d.type != PTXOperand::f16x2 && d.type != PTXOperand::b32 )) {
+				return "destination type " + PTXOperand::toString( d.type ) 
+					+ " must be f16x2 or b32 if source is .f16x2 or b32";
+			}
+			if (d.type == PTXOperand::f16x2 && (type != PTXOperand::f16x2 && type != PTXOperand::b32 )) {
+				return "source type " + PTXOperand::toString( type ) 
+					+ " must be f16x2 or b32 if destination is .f16x2 ";
+			}
 			if( modifier & ftz ) {
 				if( PTXOperand::isInt( a.type ) ) {
-					return " .ftz only valid when source is .f32.";
+					return " .ftz only valid when source is .f32,.f16 or .f16x2.";
 				}
 			}
 			break;
