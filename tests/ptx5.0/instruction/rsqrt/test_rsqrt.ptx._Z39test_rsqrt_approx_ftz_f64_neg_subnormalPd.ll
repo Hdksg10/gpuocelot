@@ -81,54 +81,43 @@ declare default i64 @__ocelot_brev_b64( i64  ) align 1;
 declare default i32 @__ocelot_brev_b32( i32  ) align 1;
 
 %Dimension = type { i32, i32, i32 };
-define default void @_Z_ocelotTranslated__Z15test_addf16_ftzP6__half( %LLVMContext* %__ctaContext ) nounwind align 1;
+define default void @_Z_ocelotTranslated__Z39test_rsqrt_approx_ftz_f64_neg_subnormalPd( %LLVMContext* %__ctaContext ) nounwind align 1;
 {
-BB_4_2:
+BB_3_2:
 	%rt0 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 7;
 	%rt1 = load i8*, i8** %rt0;
 	%rt2 = bitcast i8* %rt1 to i64*;
 	%r0 = load i64, i64* %rt2, align 8;
 	%r1 = bitcast i64 %r0 to i64;
-	%r2 = bitcast i16 1023 to i16;
-	%rt4 = bitcast i16 %r2 to half;
-	%rt5 = bitcast i16 %r2 to half;
-	%rt9 = fcmp olt half %rt4, 0xH0;
-	%rt10 = fsub half 0xH0, %rt4;
-	%rt11 = select i1 %rt9, half %rt10, half %rt4;
-	%rt12 = fcmp olt half %rt11, 0xH400;
-	%rt13 = select i1 %rt12, half 0xH0, half %rt4;
-	%rt14 = bitcast half %rt4 to i16;
-	%rt15 = icmp slt i16 %rt14, 0;
-	%rt16 = and i1 %rt15, %rt12;
-	%rt7 = select i1 %rt16, half 0xH8000, half %rt13;
-	%rt17 = fcmp olt half %rt5, 0xH0;
-	%rt18 = fsub half 0xH0, %rt5;
-	%rt19 = select i1 %rt17, half %rt18, half %rt5;
-	%rt20 = fcmp olt half %rt19, 0xH400;
-	%rt21 = select i1 %rt20, half 0xH0, half %rt5;
-	%rt22 = bitcast half %rt5 to i16;
-	%rt23 = icmp slt i16 %rt22, 0;
-	%rt24 = and i1 %rt23, %rt20;
-	%rt8 = select i1 %rt24, half 0xH8000, half %rt21;
-	%rt6 = fadd half %rt7, %rt8;
-	%rt26 = fcmp olt half %rt6, 0xH0;
-	%rt27 = fsub half 0xH0, %rt6;
-	%rt28 = select i1 %rt26, half %rt27, half %rt6;
-	%rt29 = fcmp olt half %rt28, 0xH400;
-	%rt30 = select i1 %rt29, half 0xH0, half %rt6;
-	%rt31 = bitcast half %rt6 to i16;
-	%rt32 = icmp slt i16 %rt31, 0;
-	%rt33 = and i1 %rt32, %rt29;
-	%rt25 = select i1 %rt33, half 0xH8000, half %rt30;
-	%r3 = bitcast half %rt25 to i16;
-	%rt34 = inttoptr i64 %r1 to i16*;
-	store i16 %r3, i16* %rt34, align 2;
-	%rt35 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 4;
-	%rt36 = load i8*, i8** %rt35;
-	%rt37 = bitcast i8* %rt36 to i32*;
-	store i32 2, i32* %rt37;
-	br label %BB_4_1;
-BB_4_1:
+	%r2 = bitcast double 0x800fffffffffffff to double;
+	%rt5 = fcmp olt double %r2, 0x0;
+	%rt6 = fsub double 0x0, %r2;
+	%rt7 = select i1 %rt5, double %rt6, double %r2;
+	%rt8 = fcmp olt double %rt7, 0x10000000000000;
+	%rt9 = select i1 %rt8, double 0x0, double %r2;
+	%rt10 = bitcast double %r2 to i64;
+	%rt11 = icmp slt i64 %rt10, 0;
+	%rt12 = and i1 %rt11, %rt8;
+	%rt4 = select i1 %rt12, double 0x8000000000000000, double %rt9;
+	%rt3 = call double @llvm.sqrt.f64(double %rt4);
+	%rt13 = fdiv double 0x3ff0000000000000, %rt3;
+	%rt14 = fcmp olt double %rt13, 0x0;
+	%rt15 = fsub double 0x0, %rt13;
+	%rt16 = select i1 %rt14, double %rt15, double %rt13;
+	%rt17 = fcmp olt double %rt16, 0x10000000000000;
+	%rt18 = select i1 %rt17, double 0x0, double %rt13;
+	%rt19 = bitcast double %rt13 to i64;
+	%rt20 = icmp slt i64 %rt19, 0;
+	%rt21 = and i1 %rt20, %rt17;
+	%r3 = select i1 %rt21, double 0x8000000000000000, double %rt18;
+	%rt22 = inttoptr i64 %r1 to double*;
+	store double %r3, double* %rt22, align 8;
+	%rt23 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 4;
+	%rt24 = load i8*, i8** %rt23;
+	%rt25 = bitcast i8* %rt24 to i32*;
+	store i32 2, i32* %rt25;
+	br label %BB_3_1;
+BB_3_1:
 	ret void;
 
 }

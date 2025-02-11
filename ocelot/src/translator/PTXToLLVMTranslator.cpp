@@ -5802,9 +5802,7 @@ void PTXToLLVMTranslator::_translateRsqrt( const ir::PTXInstruction& i )
 {
 	ir::LLVMCall call;
 
-	bool approx_ftz_f64 = i.type == ir::PTXOperand::f64 && (i.modifier & ir::PTXInstruction::ftz) && (i.modifier & ir::PTXInstruction::approx);
-	
-	if( i.type == ir::PTXOperand::f32 || approx_ftz_f64)
+	if( i.type == ir::PTXOperand::f32 )
 	{
 		call.name = "@llvm.sqrt.f32";
 	}
@@ -5819,32 +5817,15 @@ void PTXToLLVMTranslator::_translateRsqrt( const ir::PTXInstruction& i )
 
 	call.parameters.resize( 1 );
 	
-	if ( approx_ftz_f64 ) // rsqrt.approx.ftz.f64
+	if ( i.type == ir::PTXOperand::f64 ) // rsqrt.approx.{ftz}.f64
 	{	
-		call.d.type.type = ir::LLVMInstruction::DataType::F32;
-		// use higher 32 bits
-		ir::LLVMBitcast bitcast;
-		bitcast.d = ir::LLVMInstruction::Operand( _tempRegister(), ir::LLVMInstruction::Type( ir::LLVMInstruction::I64, ir::LLVMInstruction::Type::Element ) );
-		bitcast.a = _translate( i.a );
-		_add( bitcast );
-		
-		ir::LLVMLshr lshr;
-		lshr.d = ir::LLVMInstruction::Operand( _tempRegister(), ir::LLVMInstruction::Type( ir::LLVMInstruction::I64, ir::LLVMInstruction::Type::Element ) );
-		lshr.a = bitcast.d;
-		lshr.b = ir::LLVMInstruction::Operand( (ir::LLVMI32)32 );
-		_add( lshr );
-
-		ir::LLVMTrunc trunc;
-		trunc.d = ir::LLVMInstruction::Operand( _tempRegister(), ir::LLVMInstruction::Type( ir::LLVMInstruction::I32, ir::LLVMInstruction::Type::Element ) );
-		trunc.a = lshr.d;
-		_add( trunc );
-
-		bitcast.d = ir::LLVMInstruction::Operand( _tempRegister(), ir::LLVMInstruction::Type( ir::LLVMInstruction::F32, ir::LLVMInstruction::Type::Element ) );
-		bitcast.a = trunc.d;
-		_add( bitcast );
+		// call.parameters[0] = _translate( i.a );
 		call.parameters[0] = ir::LLVMInstruction::Operand( 
 			_tempRegister(), call.d.type );
-		_flushToZero( call.parameters[0], bitcast.d );
+		if( i.modifier & ir::PTXInstruction::ftz )
+		{
+			_flushToZeroFp64( call.parameters[0], _translate( i.a ) );
+		}
 	}
 	else if( i.modifier & ir::PTXInstruction::ftz )
 	{
@@ -5860,9 +5841,42 @@ void PTXToLLVMTranslator::_translateRsqrt( const ir::PTXInstruction& i )
 
 	_add( call );
 	
+	// handle negative result
+	// ir::LLVMFsub sub;
+	// ir::LLVMFcmp cmp;
+	// if (i.type == ir::PTXOperand::f64)
+	// {
+	// 	sub.a = ir::LLVMInstruction::Operand( (ir::LLVMF64) 0.0 );
+	// 	cmp.b = ir::LLVMInstruction::Operand( (ir::LLVMF64) 0.0 );
+	// }
+	// else {
+	// 	sub.a = ir::LLVMInstruction::Operand( (ir::LLVMF32) 0.0f );
+	// 	cmp.b = ir::LLVMInstruction::Operand( (ir::LLVMF32) 0.0f );
+	// }
+	// cmp.comparison = ir::LLVMInstruction::Olt;
+	// sub.b = call.d;
+	// cmp.a = _translate( i.a );
+	// sub.d.type = call.d.type;
+	// sub.d.name = _tempRegister();
+	// cmp.d = ir::LLVMInstruction::Operand( _tempRegister(),
+	// ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+	// ir::LLVMInstruction::Type::Element ) );
+
+	// _add( sub );
+	// _add( cmp );
+	
+	// ir::LLVMSelect sel;
+	// sel.condition = cmp.d;
+	// sel.a = sub.d;
+	// sel.b = call.d;
+	// sel.d.type = call.d.type;
+	// sel.d.name = _tempRegister();
+
+	// _add( sel );
+	
 	ir::LLVMFdiv divide;
 	
-	if ( approx_ftz_f64 ) // rsqrt.approx.ftz.f64
+	if ( false ) // rsqrt.approx.ftz.f64
 	{
 		divide.d.type = ir::LLVMInstruction::Type( ir::LLVMInstruction::F32, ir::LLVMInstruction::Type::Element );
 		divide.d.name = _tempRegister();
@@ -5882,7 +5896,7 @@ void PTXToLLVMTranslator::_translateRsqrt( const ir::PTXInstruction& i )
 	divide.a.type.category = ir::LLVMInstruction::Type::Element;
 	divide.a.constant = true;
 
-	if( i.type == ir::PTXOperand::f32 || approx_ftz_f64 )
+	if( i.type == ir::PTXOperand::f32 )
 	{
 		divide.a.f32 = 1.0;
 	}
@@ -5895,29 +5909,9 @@ void PTXToLLVMTranslator::_translateRsqrt( const ir::PTXInstruction& i )
 
 	_add( divide );		
 
-	if ( approx_ftz_f64 ) // rsqrt.approx.ftz.f64
+	if ( (i.type == ir::PTXOperand::f64) && (i.modifier & ir::PTXInstruction::ftz)) // rsqrt.approx.ftz.f64
 	{
-		ir::LLVMBitcast bitcast;
-		bitcast.a = divide.d;
-		bitcast.d = ir::LLVMInstruction::Operand( _tempRegister(), ir::LLVMInstruction::Type( ir::LLVMInstruction::I32, ir::LLVMInstruction::Type::Element ) );
-		_add( bitcast );
-
-		ir::LLVMZext zext;
-		zext.a = bitcast.d;
-		zext.d = ir::LLVMInstruction::Operand( _tempRegister(), ir::LLVMInstruction::Type( ir::LLVMInstruction::I64, ir::LLVMInstruction::Type::Element ) );
-		_add( zext );
-
-		ir::LLVMShl shift;
-		shift.a = zext.d;
-		shift.b = ir::LLVMInstruction::Operand( (ir::LLVMI32)32 );
-		shift.d = ir::LLVMInstruction::Operand( _tempRegister(), ir::LLVMInstruction::Type( ir::LLVMInstruction::I64, ir::LLVMInstruction::Type::Element ) );
-		_add( shift );
-
-		bitcast.a = shift.d;
-		bitcast.d = ir::LLVMInstruction::Operand( _tempRegister(), ir::LLVMInstruction::Type( ir::LLVMInstruction::F64, ir::LLVMInstruction::Type::Element ) );
-		_add( bitcast );
-
-		_flushToZeroFp64( _destination( i ), bitcast.d );
+		_flushToZeroFp64( _destination( i ), divide.d );
 	}
 	else if( i.modifier & ir::PTXInstruction::ftz )
 	{
@@ -9645,12 +9639,50 @@ void PTXToLLVMTranslator::_flushToZero(
 
 	ir::LLVMSelect flush;
 	
-	flush.d = d;
+	flush.d = ir::LLVMInstruction::Operand( _tempRegister(),
+	ir::LLVMInstruction::Type( less.a.type.type, 
+	ir::LLVMInstruction::Type::Element ) );
 	flush.condition = greaterEqual.d;
 	flush.a = ir::LLVMInstruction::Operand( (ir::LLVMF32) 0.0f );
 	flush.b = a;
 	
 	_add( flush );
+
+		
+	ir::LLVMBitcast cast;
+	cast.a = a;
+	cast.d = a;
+	cast.d.type.type = ir::LLVMInstruction::DataType::I32;
+	cast.d.name = _tempRegister();
+
+	_add( cast );
+
+	ir::LLVMIcmp negative;
+	negative.comparison = ir::LLVMInstruction::Slt;
+	negative.d = ir::LLVMInstruction::Operand( _tempRegister(),
+		ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+		ir::LLVMInstruction::Type::Element ) );
+	negative.a = cast.d;
+	negative.b = ir::LLVMInstruction::Operand( (ir::LLVMI32) 0 );
+
+	_add( negative );
+
+	ir::LLVMAnd negativeSubnormal;
+	negativeSubnormal.a = negative.d;
+	negativeSubnormal.b = greaterEqual.d;
+	negativeSubnormal.d = ir::LLVMInstruction::Operand( _tempRegister(),
+	ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+	ir::LLVMInstruction::Type::Element ) );
+
+	_add( negativeSubnormal );
+
+	ir::LLVMSelect sign;
+	sign.d = d;
+	sign.condition = negativeSubnormal.d;
+	sign.a = ir::LLVMInstruction::Operand( (ir::LLVMF64) -0.0 );
+	sign.b = flush.d;
+	
+	_add( sign );
 }
 /* Flush 64-bit floating point to zero. This function will not edit any properties of input operands, make sure both d and a is valid when call this function.
  */
@@ -9713,12 +9745,48 @@ void PTXToLLVMTranslator::_flushToZeroFp64(
 
 	ir::LLVMSelect flush;
 	
-	flush.d = d;
+	flush.d = ir::LLVMInstruction::Operand( _tempRegister(),
+	ir::LLVMInstruction::Type( less.a.type.type, 
+	ir::LLVMInstruction::Type::Element ) );
 	flush.condition = greaterEqual.d;
 	flush.a = ir::LLVMInstruction::Operand( (ir::LLVMF64) 0.0 );
 	flush.b = a;
-	
 	_add( flush );
+	
+	ir::LLVMBitcast cast;
+	cast.a = a;
+	cast.d = a;
+	cast.d.type.type = ir::LLVMInstruction::DataType::I64;
+	cast.d.name = _tempRegister();
+
+	_add( cast );
+
+	ir::LLVMIcmp negative;
+	negative.comparison = ir::LLVMInstruction::Slt;
+	negative.d = ir::LLVMInstruction::Operand( _tempRegister(),
+		ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+		ir::LLVMInstruction::Type::Element ) );
+	negative.a = cast.d;
+	negative.b = ir::LLVMInstruction::Operand( (ir::LLVMI64) 0 );
+
+	_add( negative );
+
+	ir::LLVMAnd negativeSubnormal;
+	negativeSubnormal.a = negative.d;
+	negativeSubnormal.b = greaterEqual.d;
+	negativeSubnormal.d = ir::LLVMInstruction::Operand( _tempRegister(),
+	ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+	ir::LLVMInstruction::Type::Element ) );
+
+	_add( negativeSubnormal );
+
+	ir::LLVMSelect sign;
+	sign.d = d;
+	sign.condition = negativeSubnormal.d;
+	sign.a = ir::LLVMInstruction::Operand( (ir::LLVMF64) -0.0 );
+	sign.b = flush.d;
+	
+	_add( sign );
 }
 
 /* Flush 16-bit floating point to zero. This function will not edit any properties of input operands, make sure both d and a is valid when call this function.
@@ -9786,21 +9854,62 @@ void PTXToLLVMTranslator::_flushToZeroFp16( const ir::LLVMInstruction::Operand& 
 
 	ir::LLVMSelect flush;
 	
-	flush.d = d;
+	flush.d = ir::LLVMInstruction::Operand( _tempRegister(),
+	ir::LLVMInstruction::Type( less.a.type.type, 
+	ir::LLVMInstruction::Type::Element ) );
 	flush.condition = greaterEqual.d;
 	flush.a = ir::LLVMInstruction::Operand( (ir::LLVMI16) 0x0000);
 	flush.a.type.type = a.type.type;
 	flush.b = a;
 	
 	_add( flush );
+		
+	ir::LLVMBitcast cast;
+	cast.a = a;
+	cast.d = a;
+	cast.d.type.type = ir::LLVMInstruction::DataType::I16;
+	cast.d.name = _tempRegister();
+
+	_add( cast );
+
+	ir::LLVMIcmp negative;
+	negative.comparison = ir::LLVMInstruction::Slt;
+	negative.d = ir::LLVMInstruction::Operand( _tempRegister(),
+		ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+		ir::LLVMInstruction::Type::Element ) );
+	negative.a = cast.d;
+	negative.b = ir::LLVMInstruction::Operand( (ir::LLVMI16) 0 );
+	negative.b.type.type = cast.d.type.type;
+
+	_add( negative );
+
+	ir::LLVMAnd negativeSubnormal;
+	negativeSubnormal.a = negative.d;
+	negativeSubnormal.b = greaterEqual.d;
+	negativeSubnormal.d = ir::LLVMInstruction::Operand( _tempRegister(),
+	ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+	ir::LLVMInstruction::Type::Element ) );
+
+	_add( negativeSubnormal );
+
+	ir::LLVMSelect sign;
+	sign.d = d;
+	sign.condition = negativeSubnormal.d;
+	sign.a = ir::LLVMInstruction::Operand( (ir::LLVMI16) 0x8000 );
+	sign.a.type.type = a.type.type;
+	sign.b = flush.d;
+	
+	_add( sign );
 }
 
 void PTXToLLVMTranslator::_flushToZeroFp16x2( const ir::LLVMInstruction::Operand& d,
 	const ir::LLVMInstruction::Operand& a ) 
 {
 
-	ir::LLVMInstruction::Value v; // value of 0
+	ir::LLVMInstruction::Value v; // value of 0.0
 	v.f16 = 0;
+	ir::LLVMInstruction::Value vn; // value of -0.0
+	vn.f16 = 0x8000;
 
 	ir::LLVMFcmp less;
 	
@@ -9868,15 +9977,56 @@ void PTXToLLVMTranslator::_flushToZeroFp16x2( const ir::LLVMInstruction::Operand
 
 	ir::LLVMSelect flush;
 	
-	flush.d = d;
+	flush.d = ir::LLVMInstruction::Operand( _tempRegister(),
+		ir::LLVMInstruction::Type( less.a.type.type, 
+		ir::LLVMInstruction::Type::Vector, 2 ) );
 	flush.condition = greaterEqual.d;
 	flush.a.type = a.type;
-	// flush.a.name = _tempRegister();
 	flush.a.constant = true;
 	flush.a.values.assign(2, v);
 	flush.b = a;
 	
 	_add( flush );
+
+	
+	ir::LLVMBitcast cast;
+	cast.a = a;
+	cast.d = a;
+	cast.d.type.type = ir::LLVMInstruction::DataType::I16;
+	cast.d.name = _tempRegister();
+
+	_add( cast );
+
+	ir::LLVMIcmp negative;
+	negative.comparison = ir::LLVMInstruction::Slt;
+	negative.d = ir::LLVMInstruction::Operand( _tempRegister(),
+	ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+	ir::LLVMInstruction::Type::Vector, 2 ) );
+	negative.a = cast.d;
+	negative.b.constant = true;
+	negative.b.values.assign(2, v);
+	negative.b.type = cast.d.type;
+
+	_add( negative );
+
+	ir::LLVMAnd negativeSubnormal;
+	negativeSubnormal.a = negative.d;
+	negativeSubnormal.b = greaterEqual.d;
+	negativeSubnormal.d = ir::LLVMInstruction::Operand( _tempRegister(),
+	ir::LLVMInstruction::Type( ir::LLVMInstruction::I1, 
+	ir::LLVMInstruction::Type::Vector, 2 ) );
+
+	_add( negativeSubnormal );
+
+	ir::LLVMSelect sign;
+	sign.d = d;
+	sign.condition = negativeSubnormal.d;
+	sign.a.type = a.type;
+	sign.a.constant = true;
+	sign.a.values.assign(2, vn);
+	sign.b = flush.d;
+	
+	_add( sign );
 }
 
 void PTXToLLVMTranslator::_saturate( const ir::LLVMInstruction::Operand& d, 

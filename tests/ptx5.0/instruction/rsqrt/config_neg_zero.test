@@ -1,0 +1,27 @@
+{
+    "kernel": "_Z34test_rsqrt_approx_ftz_f64_neg_zeroPd",
+    "threads" : {
+        "x" : 1,
+        "y" : 1,
+        "z" : 1
+    },
+    "blocks" : {
+        "x" : 1,
+        "y" : 1,
+        "z" : 1
+    },
+    "params" : ["f64", "f64"],
+    "dest": 0,
+    "size" : [
+        {
+            "x" : 1,
+            "y" : 1,
+            "z" : 1
+        },
+        {
+            "x" : 1,
+            "y" : 1,
+            "z" : 1
+        }
+    ]
+}

@@ -128,6 +128,25 @@
 	ret;
 
 }
+	// .globl	_Z34test_rsqrt_approx_ftz_f64_neg_zeroPd
+.visible .entry _Z34test_rsqrt_approx_ftz_f64_neg_zeroPd(
+	.param .u64 _Z34test_rsqrt_approx_ftz_f64_neg_zeroPd_param_0
+)
+{
+	.reg .f64 	%fd<3>;
+	.reg .b64 	%rd<3>;
+
+
+	ld.param.u64 	%rd1, [_Z34test_rsqrt_approx_ftz_f64_neg_zeroPd_param_0];
+	cvta.to.global.u64 	%rd2, %rd1;
+	mov.f64 	%fd2, 0d8000000000000000;
+	// begin inline asm
+	rsqrt.approx.ftz.f64 %fd1, %fd2;
+	// end inline asm
+	st.global.f64 	[%rd2], %fd1;
+	ret;
+
+}
 	// .globl	_Z29test_rsqrt_approx_ftz_f64_nanPd
 .visible .entry _Z29test_rsqrt_approx_ftz_f64_nanPd(
 	.param .u64 _Z29test_rsqrt_approx_ftz_f64_nanPd_param_0

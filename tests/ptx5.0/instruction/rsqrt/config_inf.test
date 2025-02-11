@@ -1,0 +1,27 @@
+{
+    "kernel": "_Z29test_rsqrt_approx_ftz_f64_infPd",
+    "threads" : {
+        "x" : 1,
+        "y" : 1,
+        "z" : 1
+    },
+    "blocks" : {
+        "x" : 1,
+        "y" : 1,
+        "z" : 1
+    },
+    "params" : ["f64", "f64"],
+    "dest": 0,
+    "size" : [
+        {
+            "x" : 1,
+            "y" : 1,
+            "z" : 1
+        },
+        {
+            "x" : 1,
+            "y" : 1,
+            "z" : 1
+        }
+    ]
+}

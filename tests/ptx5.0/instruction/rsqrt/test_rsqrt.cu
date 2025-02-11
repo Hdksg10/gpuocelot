@@ -32,6 +32,10 @@ __global__ void test_rsqrt_approx_ftz_f64_zero(double* d){
     asm("rsqrt.approx.ftz.f64 %0, %1;" : "=d"(*d) : "d"(0.0));
 }
 
+__global__ void test_rsqrt_approx_ftz_f64_neg_zero(double* d){
+    asm("rsqrt.approx.ftz.f64 %0, %1;" : "=d"(*d) : "d"(-0.0));
+}
+
 __global__ void test_rsqrt_approx_ftz_f64_nan(double* d){
     long x_bit = 0x7FF8000000000000;
     double x = *reinterpret_cast<double*>(&x_bit);
