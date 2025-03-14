@@ -4,7 +4,7 @@ project(gpuocelot C CXX CUDA ASM)
 
 option(BUILD_LLVM "Use LLVM compiled from sources: default OFF" OFF)
 option(BUILD_TESTS "Build tests: default OFF" OFF)
-option(BUILD_TESTS_CUDA "Build CUDA tests: default ON" ON)
+option(BUILD_TESTS_CUDA "Build CUDA tests: default ON" OFF)
 option(BUILD_TOOLS "Build tool executables: default ON" ON)
 option(BUILD_TESTS_NEW_PTX "Build PTX test: default OFF" OFF)
 
@@ -29,7 +29,7 @@ find_package(ZLIB REQUIRED)
 find_library(ZSTD_LIB NAMES zstd libzstd)
 
 if ("x${BUILD_LLVM}" STREQUAL "xOFF")
-find_package(LLVM REQUIRED CONFIG)
+find_package(LLVM 15 REQUIRED CONFIG)
 
 file(GLOB LLVM_LIBRARIES ${LLVM_LIBRARY_DIR}/*.a)
 else()

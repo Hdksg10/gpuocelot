@@ -8,9 +8,9 @@
 #define LLVM_EXECUTABLE_KERNEL_CPP_INCLUDED
 
 // Ocelot Includes
+#include <ocelot/executive/LLVMModuleManager.h>
 #include <ocelot/executive/LLVMExecutableKernel.h>
 #include <ocelot/executive/LLVMExecutionManager.h>
-#include <ocelot/executive/LLVMModuleManager.h>
 #include <ocelot/executive/Device.h>
 
 // Hydrazine Includes
@@ -18,6 +18,7 @@
 
 // Standard Library Includes
 #include <cstring>
+#include "ocelot/executive/LLVMState.h"
 
 #ifdef REPORT_BASE
 #undef REPORT_BASE
@@ -57,6 +58,16 @@ LLVMExecutableKernel::~LLVMExecutableKernel()
 {	
 	delete[] _argumentMemory;
 	delete[] _constantMemory;
+}
+
+void LLVMExecutableKernel::translateModule()
+{
+	if(!LLVMState::moduleManager()->isModuleLoaded(module->id()))
+	{
+		LLVMState::moduleManager()->loadModule(module, _optimizationLevel, device);
+	}
+	LLVMState::moduleManager()->translateLLVMModule(module->id());
+
 }
 
 void LLVMExecutableKernel::launchGrid(int x, int y, int z)

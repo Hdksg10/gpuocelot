@@ -8,6 +8,7 @@
 #define LLVM_MODULE_MANAGER_CPP_INCLUDED
 
 // Ocelot Includes
+#include <llvm/Transforms/Utils/Cloning.h>
 #include <ocelot/executive/LLVMModuleManager.h>
 #include <ocelot/executive/LLVMState.h>
 #include <ocelot/executive/Device.h>
@@ -66,6 +67,12 @@ void LLVMModuleManager::loadModule(const ir::Module* m,
 	translator::Translator::OptimizationLevel l, Device* d)
 {
 	_database.loadModule(m, l, d);
+}
+
+void LLVMModuleManager::translateLLVMModule(void* id)
+{
+	assert(isModuleLoaded(id));
+	_database.translateLLVMModule(id);
 }
 
 bool LLVMModuleManager::isModuleLoaded(void* id)
@@ -850,11 +857,51 @@ static void setupCallTargets(ir::PTXKernel& kernel,
 		}
 	}
 }
-
+static void translate_(llvm::Module*& module, ir::PTXKernel& kernel,
+	translator::Translator::OptimizationLevel optimization,
+	const ir::ExternalFunctionSet& externals)
+{
+	assert(module == 0);
+	llvm::LLVMContext Context;
+    llvm::SMDiagnostic Err;
+    
+    module = llvm::parseIRFile("test_module.ll", Err, llvm::getGlobalContext()).release();
+	// if (llvm::Linker::linkModules(*module, std::move(Mod))) {
+    //     std::string m;
+	// 	llvm::raw_string_ostream message(m);
+	// 	message << "LLVM Linker failed: ";
+	// 	Err.print("test_module.ll", message);
+	// 	throw hydrazine::Exception(message.str());
+    // }
+	// llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileOrErr = llvm::MemoryBuffer::getFile("module.bc");
+	// llvm::Expected<std::unique_ptr<llvm::Module>> ModOrErr =
+    //     llvm::parseBitcodeFile(FileOrErr->get()->getMemBufferRef(), Context);
+	// std::unique_ptr<llvm::Module> Mod = std::move(ModOrErr.get());
+	// module = Mod.release();
+	if(module == 0)
+	{
+		std::string m;
+		llvm::raw_string_ostream message(m);
+		message << "LLVM Parser failed: ";
+		Err.print("test_module.ll", message);
+		throw hydrazine::Exception(message.str());
+	}
+	std::string verifyError;
+	llvm::raw_string_ostream verifyOutput(verifyError);	
+	if(llvm::verifyModule(*module, &verifyOutput)) {
+		std::cout << "LLVM Module verification failed: " << verifyOutput.str();
+	}
+}
 static void translate(llvm::Module*& module, ir::PTXKernel& kernel,
 	translator::Translator::OptimizationLevel optimization,
 	const ir::ExternalFunctionSet& externals)
 {
+	if (module != 0) // we have loaded translated module
+	{
+		// Clone module into each kernel, the cloned module will be free after get metadata
+		module = llvm::CloneModule(*module).release();
+		return;
+	}
 	assert(module == 0);
 
 	report(" Translating kernel.");
@@ -909,7 +956,6 @@ static void translate(llvm::Module*& module, ir::PTXKernel& kernel,
 	}
 
 	module->setModuleIdentifier(kernel.name.c_str());
-
 	delete llvmKernel;
 }
 
@@ -936,7 +982,7 @@ static LLVMModuleManager::KernelAndTranslation::MetaData* generateMetadata(
 	
 	metadata->kernel = &kernel;
 	metadata->warpSize = 1;
-	
+	metadata->function = nullptr;
 	return metadata;
 }
 
@@ -1104,15 +1150,11 @@ static void codegen(LLVMModuleManager::Function& function, llvm::Module& module,
 	const LLVMModuleManager::ModuleDatabase& database)
 {
 	report(" Generating native code.");
-	
 	LLVMState::jit()->addModule(std::unique_ptr<llvm::Module>(&module));
-
 	link(module, kernel, device, externals, database);
-
 	report("  Invoking LLVM to Native JIT");
 
 	std::string name = "_Z_ocelotTranslated_" + kernel.name;
-
 	// https://stackoverflow.com/a/76343023/4063520	
 	function = hydrazine::bit_cast<LLVMModuleManager::Function>(
 		LLVMState::jit()->getFunctionAddress(name));
@@ -1150,13 +1192,12 @@ void LLVMModuleManager::KernelAndTranslation::unload()
 	delete _metadata;
 }
 
-LLVMModuleManager::KernelAndTranslation::MetaData*
-	LLVMModuleManager::KernelAndTranslation::metadata()
+bool LLVMModuleManager::KernelAndTranslation::prepareMetadata()
 {
-	report("Getting metadata for kernel '" << _kernel->name << "'");
-
-	if(_metadata != 0) return _metadata;
-	
+	report("Getting metadata preparation for kernel '" << _kernel->name << "'");
+	if (_metadata != 0 && _metadata->function != nullptr) 
+		return false; // we have already translated and generated code
+	if (_metadata != 0) return true; // we have already prepared metadata
 	report("Translating PTX");
 	
 	unsigned int barriers = optimizePTX(*_kernel,
@@ -1171,8 +1212,6 @@ LLVMModuleManager::KernelAndTranslation::MetaData*
 		setupPTXMemoryReferences(*_kernel, _metadata, *_parent, _device,
 			_database->getExternalFunctionSet());
 		setupCallTargets(*_kernel, *_database);
-		translate(_module, *_kernel, _optimizationLevel,
-			_database->getExternalFunctionSet());
 	}
 	catch(...)
 	{
@@ -1180,6 +1219,28 @@ LLVMModuleManager::KernelAndTranslation::MetaData*
 		_metadata = 0;
 		throw;
 	}
+	return true;
+}
+
+bool LLVMModuleManager::KernelAndTranslation::translateMetadata()
+{
+	report("Getting metadata translation for kernel '" << _kernel->name << "'");
+	if (_metadata != 0 && _metadata->function != nullptr) 
+		return false; // we have already translated and generated code
+	if (_module != 0) 
+		return true; // we have already translated the metadata
+	translate(_module, *_kernel, _optimizationLevel,
+		_database->getExternalFunctionSet());
+	return true;
+}
+
+LLVMModuleManager::KernelAndTranslation::MetaData*
+	LLVMModuleManager::KernelAndTranslation::metadata()
+{
+	report("Getting metadata for kernel '" << _kernel->name << "'");
+
+	if (!prepareMetadata()) return _metadata;
+	if (!translateMetadata()) return _metadata;
 	
 	try
 	{
@@ -1207,6 +1268,16 @@ LLVMModuleManager::KernelAndTranslation::MetaData*
 const std::string& LLVMModuleManager::KernelAndTranslation::name() const
 {
 	return _kernel->name;
+}
+
+llvm::Module* LLVMModuleManager::KernelAndTranslation::module() const 
+{
+	return _module;
+}
+
+void LLVMModuleManager::KernelAndTranslation::setModule(llvm::Module* module)
+{
+	_module = llvm::CloneModule(*module).release();
 }
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1385,6 +1456,48 @@ void LLVMModuleManager::ModuleDatabase::loadModule(const ir::Module* module,
 	_modules.insert(std::make_pair(module->id(),
 		Module(subkernels, _kernels.size(), newModule)));
 	_kernels.insert(_kernels.end(), subkernels.begin(), subkernels.end());
+
+	int lowId = _modules.at(module->id()).lowId();
+	int highId = _modules.at(module->id()).highId();
+
+	for (int id = lowId; id <= highId; id++) {
+		report("find kernel '" << _kernels[id].name() << "' at index " << id);
+		_kernels[id].prepareMetadata();
+	}
+
+	// translate and link modules
+	auto destModule = std::make_unique<llvm::Module>("OcelotTranslatedPTXModule", llvm::getGlobalContext()).release();
+	for (int id = lowId; id <= highId; id++) {
+		report("translate kernel '" << _kernels[id].name() << "' at index " << id);
+		_kernels[id].translateMetadata();
+		// link modules
+		bool err = llvm::Linker::linkModules(*destModule, std::unique_ptr<llvm::Module>(_kernels[id].module()));
+		if (err) {
+			report("linking failed");
+			break;
+		}
+	}
+	for (int id = lowId; id <= highId; id++) {
+		_kernels[id].setModule(destModule);
+	}
+	// we will clone the module for each kernel in setModule(), so we can release the original module
+	delete destModule;
+
+}
+
+void LLVMModuleManager::ModuleDatabase::loadLLVMModule(llvm::Module* module) 
+{
+	report("Loading LLVM Module...");
+	for (auto&& subkernel : _kernels) {
+		subkernel.setModule(module);
+	}
+}
+
+void LLVMModuleManager::ModuleDatabase::translateLLVMModule(void* id) 
+{
+	ModuleMap::iterator module = _modules.find(id);
+	llvm::Module* llvmModule = 0;
+	// translateModule(llvmModule, &(module->second));
 }
 
 bool LLVMModuleManager::ModuleDatabase::isModuleLoaded(

@@ -1,0 +1,147 @@
+; Code assembled by Ocelot LLVMKernel TODO
+
+
+%LLVMContext = type { %Dimension, %Dimension, %Dimension, %Dimension, i8*, i8*, i8*, i8*, i8*, i8*, i32 };
+declare default i32 @__ocelot_get_extent( %LLVMContext* , i32  ) align 1;
+declare default i16 @llvm.convert.to.fp16.f32( float  ) align 1;
+declare default float @llvm.convert.from.fp16.f32( i16  ) align 1;
+declare default float @llvm.pow.f32( float , float  ) align 1;
+declare default float @llvm.exp2.f32( float  ) align 1;
+declare default float @llvm.log2.f32( float  ) align 1;
+declare default float @llvm.log.f32( float  ) align 1;
+declare default float @llvm.sin.f32( float  ) align 1;
+declare default float @llvm.cos.f32( float  ) align 1;
+declare default double @llvm.sqrt.f64( double  ) align 1;
+declare default float @llvm.sqrt.f32( float  ) align 1;
+declare default i64 @llvm.ctlz.i64( i64  ) align 1;
+declare default i32 @llvm.ctlz.i32( i32  ) align 1;
+declare default i16 @llvm.ctlz.i16( i16  ) align 1;
+declare default i8 @llvm.ctlz.i8( i8  ) align 1;
+declare default i64 @llvm.readcyclecounter(  ) align 1;
+declare default i64 @llvm.ctpop.i64( i64  ) align 1;
+declare default i32 @llvm.ctpop.i32( i32  ) align 1;
+declare default i16 @llvm.ctpop.i16( i16  ) align 1;
+declare default i8 @llvm.ctpop.i8( i8  ) align 1;
+declare default float @nearbyintf( float  ) align 1;
+declare default float @truncf( float  ) align 1;
+declare default float @ceilf( float  ) align 1;
+declare default float @floorf( float  ) align 1;
+declare default double @nearbyint( double  ) align 1;
+declare default double @trunc( double  ) align 1;
+declare default double @ceil( double  ) align 1;
+declare default double @floor( double  ) align 1;
+declare default i64 @__ocelot_mul_hi_s64( i64 , i64  ) align 1;
+declare default i64 @__ocelot_mul_hi_u64( i64 , i64  ) align 1;
+declare default i32* @__ocelot_txq( %LLVMContext* , i32 , i32  ) align 1;
+declare default i32 @__ocelot_atomic_dec_32( i64 , i32  ) align 1;
+declare default i32 @__ocelot_atomic_inc_32( i64 , i32  ) align 1;
+declare default void @__ocelot_tex_3d_fs( float* , %LLVMContext* , i32 , i32 , i32 , i32 , i32  ) align 1;
+declare default void @__ocelot_tex_3d_fu( float* , %LLVMContext* , i32 , i32 , i32 , i32 , i32  ) align 1;
+declare default void @__ocelot_tex_3d_ff( float* , %LLVMContext* , i32 , float , float , float , float  ) align 1;
+declare default void @__ocelot_tex_3d_sf( i32* , %LLVMContext* , i32 , float , float , float , float  ) align 1;
+declare default void @__ocelot_tex_3d_uf( i32* , %LLVMContext* , i32 , float , float , float , float  ) align 1;
+declare default void @__ocelot_tex_3d_ss( i32* , %LLVMContext* , i32 , i32 , i32 , i32 , i32  ) align 1;
+declare default void @__ocelot_tex_3d_su( i32* , %LLVMContext* , i32 , i32 , i32 , i32 , i32  ) align 1;
+declare default void @__ocelot_tex_3d_us( i32* , %LLVMContext* , i32 , i32 , i32 , i32 , i32  ) align 1;
+declare default void @__ocelot_tex_3d_uu( i32* , %LLVMContext* , i32 , i32 , i32 , i32 , i32  ) align 1;
+declare default void @__ocelot_tex_2d_fs( float* , %LLVMContext* , i32 , i32 , i32  ) align 1;
+declare default void @__ocelot_tex_2d_fu( float* , %LLVMContext* , i32 , i32 , i32  ) align 1;
+declare default void @__ocelot_tex_a2d_ff( float* , %LLVMContext* , i32 , float , float , i32  ) align 1;
+declare default void @__ocelot_tex_2d_ff( float* , %LLVMContext* , i32 , float , float  ) align 1;
+declare default void @__ocelot_tex_2d_sf( i32* , %LLVMContext* , i32 , float , float  ) align 1;
+declare default void @__ocelot_tex_2d_uf( i32* , %LLVMContext* , i32 , float , float  ) align 1;
+declare default void @__ocelot_tex_2d_ss( i32* , %LLVMContext* , i32 , i32 , i32  ) align 1;
+declare default void @__ocelot_tex_2d_su( i32* , %LLVMContext* , i32 , i32 , i32  ) align 1;
+declare default void @__ocelot_tex_2d_us( i32* , %LLVMContext* , i32 , i32 , i32  ) align 1;
+declare default void @__ocelot_tex_2d_uu( i32* , %LLVMContext* , i32 , i32 , i32  ) align 1;
+declare default void @__ocelot_tex_1d_fs( float* , %LLVMContext* , i32 , i32  ) align 1;
+declare default void @__ocelot_tex_1d_fu( float* , %LLVMContext* , i32 , i32  ) align 1;
+declare default void @__ocelot_tex_1d_ff( float* , %LLVMContext* , i32 , float  ) align 1;
+declare default void @__ocelot_tex_1d_sf( i32* , %LLVMContext* , i32 , float  ) align 1;
+declare default void @__ocelot_tex_1d_uf( i32* , %LLVMContext* , i32 , float  ) align 1;
+declare default void @__ocelot_tex_1d_ss( i32* , %LLVMContext* , i32 , i32  ) align 1;
+declare default void @__ocelot_tex_1d_su( i32* , %LLVMContext* , i32 , i32  ) align 1;
+declare default void @__ocelot_tex_1d_us( i32* , %LLVMContext* , i32 , i32  ) align 1;
+declare default void @__ocelot_tex_1d_uu( i32* , %LLVMContext* , i32 , i32  ) align 1;
+declare default i1 @__ocelot_vote( i1 , i32 , i1  ) align 1;
+declare default i32 @__ocelot_prmt_rc16( i32 , i32 , i32  ) align 1;
+declare default i32 @__ocelot_prmt_ecr( i32 , i32 , i32  ) align 1;
+declare default i32 @__ocelot_prmt_ecl( i32 , i32 , i32  ) align 1;
+declare default i32 @__ocelot_prmt_rc8( i32 , i32 , i32  ) align 1;
+declare default i32 @__ocelot_prmt_b4e( i32 , i32 , i32  ) align 1;
+declare default i32 @__ocelot_prmt_f4e( i32 , i32 , i32  ) align 1;
+declare default i32 @__ocelot_prmt( i32 , i32 , i32  ) align 1;
+declare default i32 @__ocelot_bfind_b64( i64 , i1  ) align 1;
+declare default i32 @__ocelot_bfind_b32( i32 , i1  ) align 1;
+declare default i64 @__ocelot_bfi_b64( i64 , i64 , i32 , i32  ) align 1;
+declare default i32 @__ocelot_bfi_b32( i32 , i32 , i32 , i32  ) align 1;
+declare default i64 @__ocelot_bfe_b64( i64 , i32 , i32 , i1  ) align 1;
+declare default i32 @__ocelot_bfe_b32( i32 , i32 , i32 , i1  ) align 1;
+declare default i64 @__ocelot_brev_b64( i64  ) align 1;
+declare default i32 @__ocelot_brev_b32( i32  ) align 1;
+
+%Dimension = type { i32, i32, i32 };
+define default void @_Z_ocelotTranslated__Z20test_cvta_to_genericPi( %LLVMContext* %__ctaContext ) nounwind align 1;
+{
+$OcelotRegisterInitializerBlock:
+	%ri0 = bitcast i32 0 to i32;
+	br label %BB_2_2;
+BB_2_2:
+	%r0 = phi i32 [ %ri0, %$OcelotRegisterInitializerBlock ];
+	%rt0 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 7;
+	%rt1 = load i8*, i8** %rt0;
+	%rt2 = bitcast i8* %rt1 to i64*;
+	%r1 = load i64, i64* %rt2, align 8;
+	%rt3 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 0, i32 0;
+	%rt4 = load i32, i32* %rt3;
+	%r2 = bitcast i32 %rt4 to i32;
+	%rt5 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 1, i32 0;
+	%rt6 = load i32, i32* %rt5;
+	%r3 = bitcast i32 %rt6 to i32;
+	%rt7 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 2, i32 0;
+	%rt8 = load i32, i32* %rt7;
+	%r4 = bitcast i32 %rt8 to i32;
+	%rt9 = mul i32 %r4, %r3;
+	%r5 = add i32 %r2, %rt9;
+	%r6 = icmp sgt i32 %r5, 3;
+	br i1 %r6, label %BB_2_4, label %BB_2_3;
+BB_2_3:
+	%r10 = bitcast i64 %r1 to i64;
+	%rt10 = sext i32 %r5 to i64;
+	%r11 = mul i64 %rt10, 4;
+	%r12 = bitcast i64 0 to i64;
+	%rt11 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 6;
+	%rt12 = load i8*, i8** %rt11;
+	%rt13 = ptrtoint i8* %rt12 to i64;
+	%rt14 = add i64 %r12, %rt13;
+	%rt15 = inttoptr i64 %rt14 to i64*;
+	%r13 = ptrtoint i64* %rt15 to i64;
+	%r14 = add i64 %r13, %r11;
+	%rt16 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 6;
+	%rt17 = load i8*, i8** %rt16;
+	%rt18 = call i32 @__ocelot_get_extent(%LLVMContext* %__ctaContext, i32 1);
+	%rt19 = ptrtoint i8* %rt17 to i64;
+	%rt21 = bitcast i32 %rt18 to i32;
+	%rt22 = zext i32 %rt21 to i64;
+	%rt20 = bitcast i64 %rt22 to i64;
+	%rt23 = add i64 %rt20, %rt19;
+	%rt24 = icmp uge i64 %r14, %rt19;
+	%rt25 = icmp ult i64 %r14, %rt23;
+	%r15 = and i1 %rt25, %rt24;
+	%r16 = bitcast i32 1 to i32;
+	%r17 = select i1 %r15, i32 %r16, i32 %r0;
+	%r18 = add i64 %r10, %r11;
+	%rt26 = inttoptr i64 %r18 to i32*;
+	store i32 %r17, i32* %rt26, align 4;
+	br label %BB_2_4;
+BB_2_4:
+	%rt27 = getelementptr %LLVMContext, %LLVMContext* %__ctaContext, i32 0, i32 4;
+	%rt28 = load i8*, i8** %rt27;
+	%rt29 = bitcast i8* %rt28 to i32*;
+	store i32 2, i32* %rt29;
+	br label %BB_2_1;
+BB_2_1:
+	ret void;
+
+}
+

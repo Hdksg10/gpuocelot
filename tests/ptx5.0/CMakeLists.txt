@@ -11,7 +11,7 @@ set(${PROJECT_NAME}_INCLUDE_DIRS
     )
 
 
-file(GLOB TESTS_NEW_PTX_SRC "./src/*.cpp")
+file(GLOB TESTS_NEW_PTX_SRC "./src/TestInstruction.cpp" "./src/PTXKernelConfig.cpp")
 # file(GLOB TESTS_NEW_PTX_HEADER "./*.h")
 
 add_library(${PROJECT_NAME}_tests_new_ptx SHARED ${TESTS_NEW_PTX_SRC})
@@ -22,6 +22,14 @@ set_property(TARGET ${PROJECT_NAME}_tests_new_ptx PROPERTY CXX_STANDARD 17)
 # target_link_directories(${PROJECT_NAME}_tests_new_ptx PUBLIC ${CUDAToolkit_LIBRARY_DIR})
 target_link_libraries(${PROJECT_NAME}_tests_new_ptx PUBLIC CUDA::cuda_driver ${PROJECT_NAME} ${${PROJECT_NAME}_LINK_LIBRARIES})
 
+add_executable(tests_llvm_kernel "./src/TestLLVMKernel.cpp")
+set_property(TARGET tests_llvm_kernel PROPERTY CXX_STANDARD 17)
+target_compile_definitions(tests_llvm_kernel PRIVATE ${${PROJECT_NAME}_DEFINITIONS})
+target_compile_options(tests_llvm_kernel PRIVATE PRIVATE ${${PROJECT_NAME}_CXXFLAGS})
+target_include_directories(tests_llvm_kernel PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
+target_link_libraries(tests_llvm_kernel PRIVATE ${PROJECT_NAME}_tests_new_ptx)
+target_link_libraries(tests_llvm_kernel PRIVATE ${PROJECT_NAME})
+target_link_libraries(tests_llvm_kernel PRIVATE LLVMLinker)
 
 function(ptx_add_tests name)
     file(GLOB TESTS "instruction/${name}/Test*.cpp")

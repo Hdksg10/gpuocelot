@@ -8,11 +8,18 @@
 #define LLVM_MODULE_MANAGER_H_INCLUDED
 
 // Ocelot Includes
+#include <llvm/Transforms/Utils/Cloning.h>
+
 #include <ocelot/translator/Translator.h>
 #include <ocelot/executive/ExecutableKernel.h>
 #include <ocelot/executive/LLVMState.h>
 #include <ocelot/ir/ControlFlowGraph.h>
 #include <ocelot/ir/Module.h>
+#include <llvm/IRReader/IRReader.h>
+#include <llvm/Linker/Linker.h>
+#include <llvm/Bitcode/BitcodeWriter.h>
+#include <llvm/Bitcode/BitcodeReader.h>
+// #include <llvm/Transforms/Utils/Cloning.h>
 
 // Hydrazine Includes
 #include <hydrazine/Thread.h>
@@ -52,6 +59,9 @@ public:
 
 	/*! \brief Is a module loaded? */
 	bool isModuleLoaded(void* id);
+	
+	/*! \brief Translate the loaded modules into LLVM modules */	
+	void translateLLVMModule(void* id);
 
 	/*! \brief Gets the total number of functions in all modules */
 	unsigned int totalFunctionCount();
@@ -111,8 +121,12 @@ public:
 
 	public:
 		void               unload();
+		bool               prepareMetadata();
+		bool               translateMetadata();
 		MetaData*          metadata();
 		const std::string& name() const;
+		void               setModule(llvm::Module* module);
+		llvm::Module*      module() const;
 	
 	private:
 		ir::PTXKernel*                            _kernel;
@@ -196,7 +210,13 @@ public:
 		/*! \brief Load module into the database */
 		void loadModule(const ir::Module* module,
 			translator::Translator::OptimizationLevel l, Device* device);
-	
+		
+		/*! \brief Translate the loaded modules into LLVM modules */	
+		void translateLLVMModule(void* id);
+
+		/*! \brief Load translated LLVM Module into the data base */
+		void loadLLVMModule(llvm::Module* module);
+
 		/*! \brief Is a module loaded? */
 		bool isModuleLoaded(void* id);
 	

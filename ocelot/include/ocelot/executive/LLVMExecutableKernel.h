@@ -10,6 +10,7 @@
 // Ocelot Includes
 #include <ocelot/translator/Translator.h>
 #include <ocelot/executive/ExecutableKernel.h>
+#include <ocelot/executive/LLVMState.h>
 
 // Standard Library Includes
 #include <unordered_map>
@@ -46,6 +47,9 @@ public:
 		OptimizationLevel l = translator::Translator::NoOptimization);
 	/*! \brief Clean up the runtime */
 	~LLVMExecutableKernel();
+
+public:
+	void translateModule();
 
 public:
 	/*! \brief Launch a kernel on a 2D grid */

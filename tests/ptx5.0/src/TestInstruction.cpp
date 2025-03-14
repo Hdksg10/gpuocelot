@@ -537,14 +537,14 @@ namespace test {
 			}
 			case ir::PTXOperand::DataType::f16: {
 				for (size_t i = 0; i < array.dim3.size(); ++i) {
-					std::cout << array.array.p_f16[i] << " ";
+					std::cout << static_cast<float>(array.array.p_f16[i]) << " ";
 				}
 				std::cout << std::endl;
 				break;
 			}
 			case ir::PTXOperand::DataType::f16x2: {
 				for (size_t i = 0; i < array.dim3.size(); ++i) {
-					std::cout << "[" << array.array.p_f16x2[i].x << " , " << array.array.p_f16x2[i].y << "] ";
+					std::cout << "[" << static_cast<float>(array.array.p_f16x2[i].x) << " , " << static_cast<float>(array.array.p_f16x2[i].y) << "] ";
 				}
 				std::cout << std::endl;
 				break;
