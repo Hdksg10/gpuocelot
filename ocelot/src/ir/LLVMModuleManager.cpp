@@ -51,7 +51,7 @@
 #undef REPORT_BASE
 #endif
 
-#define REPORT_BASE 0
+#define REPORT_BASE 2
 
 #define REPORT_ALL_LLVM_ASSEMBLY 0
 
@@ -1268,12 +1268,17 @@ static void codegen_orc(LLVMModuleManager::Function& function, llvm::Module& mod
 	auto contextPtr = LLVMState::context();
 	auto jit = LLVMState::orcjit();
 	auto TSM = llvm::orc::ThreadSafeModule(std::unique_ptr<llvm::Module>(&module), llvm::orc::ThreadSafeContext(std::unique_ptr<llvm::LLVMContext>(contextPtr)));
-	
+	auto _module = TSM.getModuleUnlocked();
+	_module->dump();
+	auto &JD = jit->getMainJITDylib();
+	JD.addGenerator(
+    cantFail(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
+        jit->getDataLayout().getGlobalPrefix())));
 	if (auto Err = jit->addIRModule(std::move(TSM))) {
 		llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "Failed to add module: ");
 		return;
 	}
-	link_orc(module, kernel, device, externals, database);
+	// link_orc(module, kernel, device, externals, database);
 	std::string name = "_Z_ocelotTranslated_" + kernel.name;
 	auto Sym = jit->lookup(name);
 	if (!Sym) {

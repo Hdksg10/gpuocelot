@@ -3,7 +3,8 @@
 	\author Gregory Diamos <gregory.diamos@gatech.edu>
 	\brief The header file for the LLVMState class.
 */
-
+#include <llvm/Support/Error.h>
+#include <llvm/Support/Host.h>
 #include <llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
@@ -96,20 +97,34 @@ LLVMState::LLVMState() : _jit(0), _context(0), _module(0), _targetMachine(0), _o
 	_jit = factory.create();
 	_jit->DisableLazyCompilation(true);
 
-	auto orcjitExpected = llvm::orc::JITTargetMachineBuilder::detectHost();
-    if (!orcjitExpected) {
-        // Handle error (e.g., log or throw an exception)
-        llvm::logAllUnhandledErrors(orcjitExpected.takeError(), llvm::errs(), "JITTargetMachineBuilder error: ");
-        assertM(false, "Failed to detect host JIT target machine.");
+	std::string TargetTriple = llvm::sys::getProcessTriple();
+	std::string CPU = llvm::sys::getHostCPUName().str();
+	llvm::StringMap<bool> Features;
+    llvm::sys::getHostCPUFeatures(Features);
+	std::vector<std::string> EnabledFeatures;
+    for (const auto &F : Features) {
+        if (F.second) {
+            EnabledFeatures.push_back("+" + F.first().str());
+        }
     }
-	auto tm = orcjitExpected->createTargetMachine();
-	_targetMachine = tm->release();
-    
-	auto orcjitExpected2 = llvm::orc::LLJITBuilder().create();
+	#if defined(__riscv)
+		std::cout << "RISC-V detected" << std::endl;
+		// manually set RISC-V features
+		auto jtmb = llvm::orc::JITTargetMachineBuilder(llvm::Triple(TargetTriple));
+		jtmb.setCPU(CPU);
+		jtmb.addFeatures(EnabledFeatures);
+	#else
+		auto jtmb = llvm::cantFail(llvm::orc::JITTargetMachineBuilder::detectHost());
+	#endif
+	for (const auto &Feature : jtmb.getFeatures().getFeatures()) {
+        std::cout << Feature << " ";
+    }
+	auto orcjitExpected2 = llvm::orc::LLJITBuilder().setJITTargetMachineBuilder(jtmb).create();
     assertM(orcjitExpected2, "Creating the OrcJIT failed.");
 	_orcjit = orcjitExpected2->release();
+	
 
-	assertM(_targetMachine != 0, "Creating target machine failed.");
+	// assertM(_targetMachine != 0, "Creating target machine failed.");
 	assertM(_jit != 0, "Creating the JIT failed.");
 	report(" The JIT is alive.");
 

@@ -238,6 +238,7 @@ set(${PROJECT_NAME}_LINK_LIBRARIES
 	Boost::filesystem
 	ZLIB::ZLIB
 	tinfo
+	gcc
 	${ZSTD_LIB}
 	${CMAKE_DL_LIBS})
 
