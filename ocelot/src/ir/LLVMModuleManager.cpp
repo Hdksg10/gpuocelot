@@ -8,6 +8,9 @@
 #define LLVM_MODULE_MANAGER_CPP_INCLUDED
 
 // Ocelot Includes
+#include <llvm-14/llvm/Support/Error.h>
+#include <llvm/ExecutionEngine/Orc/LLJIT.h>
+#include <llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 #include <ocelot/executive/LLVMModuleManager.h>
 #include <ocelot/executive/LLVMState.h>
@@ -1160,6 +1163,126 @@ static void codegen(LLVMModuleManager::Function& function, llvm::Module& module,
 		LLVMState::jit()->getFunctionAddress(name));
 }
 
+static void link_orc(llvm::Module& module, const ir::PTXKernel& kernel, 
+	Device* device, const ir::ExternalFunctionSet& externals,
+	const LLVMModuleManager::ModuleDatabase& database)
+{
+	// Add global variables
+	report("  Linking global variables.");
+
+	auto jit = LLVMState::orcjit();
+    auto &dylib = jit->getMainJITDylib();
+	auto &session = jit->getExecutionSession();
+    llvm::orc::MangleAndInterner Mangle(session, jit->getDataLayout());
+	for(ir::Module::GlobalMap::const_iterator 
+		global = kernel.module->globals().begin(); 
+		global != kernel.module->globals().end(); ++global) 
+	{
+		if(global->second.statement.directive == ir::PTXStatement::Global) 
+		{
+			assert(device != 0);
+
+			llvm::GlobalValue* value = module.getNamedValue(global->first);
+			assertM(value != 0, "Global variable " << global->first 
+				<< " not found in llvm module.");
+			Device::MemoryAllocation* allocation = device->getGlobalAllocation( 
+				kernel.module->id(), global->first);
+			assert(allocation != 0);
+			report("   Binding global variable " << global->first 
+				<< " to " << allocation->pointer());
+			// LLVMState::jit()->addGlobalMapping(value, allocation->pointer());
+			auto symbol = llvm::JITEvaluatedSymbol(
+                reinterpret_cast<uint64_t>(allocation->pointer()),
+                llvm::JITSymbolFlags::Exported);
+			// for test only
+            llvm::cantFail(dylib.define(llvm::orc::absoluteSymbols({{Mangle(value->getName()), symbol}})));
+		}
+	}
+	
+	// Add global references to function entry points
+	report("  Linking global references to function entry points.");
+	for(ir::Module::GlobalMap::const_iterator 
+		global = kernel.module->globals().begin(); 
+		global != kernel.module->globals().end(); ++global) 
+	{
+		for(ir::PTXStatement::SymbolVector::const_iterator symbol =
+			global->second.statement.array.symbols.begin(); symbol !=
+			global->second.statement.array.symbols.end(); ++symbol)
+		{
+			assert(device != 0);
+			
+			size_t size = ir::PTXOperand::bytes(global->second.statement.type);
+			size_t offset = symbol->offset * size;
+			
+			Device::MemoryAllocation* allocation = device->getGlobalAllocation( 
+				kernel.module->id(), global->first);
+			assert(allocation != 0);
+			report("   Adding symbol " << symbol->name 
+				<< " to global " << global->first << " at byte-offset "
+				<< offset);
+			
+			LLVMModuleManager::FunctionId id = database.getFunctionId(
+				kernel.module->id(), symbol->name);
+			
+			std::memcpy((char*)allocation->pointer() + offset, &id, size);
+		}
+	}
+	
+	// Add externals
+	report("  Linking global pointers to external (host) functions.");
+	if(&externals == 0) return;
+	
+	for(ir::Module::FunctionPrototypeMap::const_iterator
+		prototype = kernel.module->prototypes().begin();
+		prototype != kernel.module->prototypes().end(); ++prototype)
+	{
+		ir::ExternalFunctionSet::ExternalFunction* external = externals.find(
+			prototype->second.identifier);
+	
+		if(external != 0)
+		{
+			// Would you ever want to call into address 0?
+			assert(external->functionPointer() != 0);
+			
+			llvm::GlobalValue* value = module.getNamedValue(external->name());
+			assertM(value != 0, "Global function " << external->name() 
+				<< " not found in llvm module.");
+			report("   Binding global variable " << external->name() 
+				<< " to " << external->functionPointer());
+			// LLVMState::jit()->addGlobalMapping(value,
+			// 	external->functionPointer());
+			auto symbol = llvm::JITEvaluatedSymbol(
+                reinterpret_cast<uint64_t>(external->functionPointer()),
+                llvm::JITSymbolFlags::Exported);
+			llvm::cantFail(dylib.define(llvm::orc::absoluteSymbols({{Mangle(value->getName()), symbol}})));
+		}
+	}
+}
+
+static void codegen_orc(LLVMModuleManager::Function& function, llvm::Module& module,
+	const ir::PTXKernel& kernel, Device* device,
+	const ir::ExternalFunctionSet& externals,
+	const LLVMModuleManager::ModuleDatabase& database)
+{
+	report(" Generating native code.");
+	auto contextPtr = LLVMState::context();
+	auto jit = LLVMState::orcjit();
+	auto TSM = llvm::orc::ThreadSafeModule(std::unique_ptr<llvm::Module>(&module), llvm::orc::ThreadSafeContext(std::unique_ptr<llvm::LLVMContext>(contextPtr)));
+	
+	if (auto Err = jit->addIRModule(std::move(TSM))) {
+		llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "Failed to add module: ");
+		return;
+	}
+	link_orc(module, kernel, device, externals, database);
+	std::string name = "_Z_ocelotTranslated_" + kernel.name;
+	auto Sym = jit->lookup(name);
+	if (!Sym) {
+		llvm::logAllUnhandledErrors(Sym.takeError(), llvm::errs(), "Failed to find function: ");
+		return;
+	}
+	function = hydrazine::bit_cast<LLVMModuleManager::Function>(Sym->getValue());
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1182,14 +1305,14 @@ void LLVMModuleManager::KernelAndTranslation::unload()
 	}
 	assert(_module != 0);
 
-	llvm::Function* function = _module->getFunction(_kernel->name);
+	// llvm::Function* function = _module->getFunction(_kernel->name);
 #if 0
 	LLVMState::jit()->freeMachineCodeForFunction(function);
 #endif
-	LLVMState::jit()->removeModule(_module);
-	delete _kernel;
-	delete _module;
-	delete _metadata;
+	// LLVMState::jit()->removeModule(_module);
+	// delete _kernel;
+	// delete _module;
+	// delete _metadata;
 }
 
 bool LLVMModuleManager::KernelAndTranslation::prepareMetadata()
@@ -1245,7 +1368,7 @@ LLVMModuleManager::KernelAndTranslation::MetaData*
 	try
 	{
 		optimize(*_module, _optimizationLevel);
-		codegen(_metadata->function, *_module, *_kernel, _device,
+		codegen_orc(_metadata->function, *_module, *_kernel, _device,
 			_database->getExternalFunctionSet(), *_database);
 	}
 	catch(...)
@@ -1254,7 +1377,7 @@ LLVMModuleManager::KernelAndTranslation::MetaData*
 #if 0
 		LLVMState::jit()->freeMachineCodeForFunction(function);
 #endif
-		LLVMState::jit()->removeModule(_module);
+		// LLVMState::jit()->removeModule(_module);
 		delete _module;
 		delete _metadata;
 		_metadata = 0;

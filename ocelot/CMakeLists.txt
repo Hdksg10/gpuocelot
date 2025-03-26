@@ -204,6 +204,7 @@ set(LLVM_LIBRARIES
 	LLVMDebugInfoCodeView
 	LLVMFrontendOpenMP
 	LLVMOrcShared
+	LLVMOrcJIT
 	LLVMTextAPI
 	LLVMX86AsmParser
 	LLVMDemangle

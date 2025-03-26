@@ -7,11 +7,19 @@
 #ifndef LLVM_STATE_H_INCLUDED
 #define LLVM_STATE_H_INCLUDED
 
+// #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
+
 namespace llvm
 {
+	
 	class ExecutionEngine;
 	class LLVMContext;
 	class Module;
+	class TargetMachine;
+	namespace orc{
+		class JITTargetMachineBuilder;
+		class LLJIT;
+	}
 }
 
 namespace executive
@@ -31,6 +39,12 @@ public:
 
 	/*! \brief Get a reference to the module manager */
 	static LLVMModuleManager* moduleManager();
+
+	/*! \brief OrcJIT engine */
+	static llvm::orc::LLJIT* orcjit(); 
+
+	/*! \brief OrcJIT target machine */
+	static llvm::TargetMachine* targetMachine(); 
 
 	LLVMState(LLVMState const&) = delete;
 	LLVMState& operator=(LLVMState const&) = delete;
@@ -52,6 +66,12 @@ private:
 	
 	/*! \brief LLVM fake mofule */
 	llvm::Module* _module;
+
+	/*! \brief OrcJIT engine */
+	llvm::orc::LLJIT* _orcjit;
+
+	/*! \brief OrcJIT target machine */
+	llvm::TargetMachine* _targetMachine;
 
 	LLVMModuleManager* _manager;
 };
