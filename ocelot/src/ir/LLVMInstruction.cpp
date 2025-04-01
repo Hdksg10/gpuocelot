@@ -582,6 +582,7 @@ namespace ir
 			case I1:   return 1;   break;
 			case I8:   return 8;   break;
 			case I16:  return 16;  break;
+			case F16:  return 16;  break;
 			case F32:  /* fall through */
 			case I32:  return 32;  break;
 			case F64:  /* fall through */

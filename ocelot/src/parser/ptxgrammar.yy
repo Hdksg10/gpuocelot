@@ -67,7 +67,7 @@
 %token<text> OPCODE_BFI OPCODE_BFE OPCODE_TESTP OPCODE_TLD4 OPCODE_BAR
 %token<text> OPCODE_PREFETCH OPCODE_PREFETCHU OPCODE_SHFL
 /* PTX ISA 5.0  */
-%token<text> OPCODE_LOP3 OPCODE_SHF OPCODE_DP4A OPCODE_DP2A
+%token<text> OPCODE_LOP3 OPCODE_SHF OPCODE_DP4A OPCODE_DP2A OPCODE_BARRIER
 %token<value> PREPROCESSOR_INCLUDE PREPROCESSOR_DEFINE PREPROCESSOR_IF 
 %token<value> PREPROCESSOR_IFDEF PREPROCESSOR_ELSE PREPROCESSOR_ENDIF 
 %token<value> PREPROCESSOR_LINE PREPROCESSOR_FILE
@@ -1078,7 +1078,9 @@ optionalBarrierOperator : reductionOperation dataType | /* or nothing */ ;
 
 operandSequence: operand operandSequence | /* empty */ ;
 
-bar : OPCODE_BAR barrierOperation optionalBarrierOperator operandSequence ';'
+bar_opcode : OPCODE_BARRIER | OPCODE_BAR
+
+bar : bar_opcode barrierOperation optionalBarrierOperator operandSequence ';'
 {
 	state.instruction( $<text>1 );
 };

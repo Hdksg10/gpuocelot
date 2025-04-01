@@ -114,6 +114,8 @@ LABEL ({IDENTIFIER}{WHITESPACE}":")
                                     return OPCODE_ABS; }
 "bar"                           { sstrcpy( yylval->text, yytext, 1024 ); \
                                     return OPCODE_BAR; }
+"barrier"                       { sstrcpy( yylval->text, yytext, 1024 ); \
+                                    return OPCODE_BARRIER; }
 "bfi"                           { sstrcpy( yylval->text, yytext, 1024 ); \
                                     return OPCODE_BFI; }
 "bfe"                           { sstrcpy( yylval->text, yytext, 1024 ); \
