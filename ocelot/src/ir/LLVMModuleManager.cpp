@@ -8,7 +8,7 @@
 #define LLVM_MODULE_MANAGER_CPP_INCLUDED
 
 // Ocelot Includes
-#include <llvm-14/llvm/Support/Error.h>
+#include <llvm/Support/Error.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
 #include <llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h>
 #include <llvm/Transforms/Utils/Cloning.h>
@@ -34,7 +34,7 @@
 
 // LLVM Includes
 #include <llvm/Transforms/Scalar.h>
-#include "llvm/IR/LegacyPassManager.h"
+#include <llvm/IR/LegacyPassManager.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/AsmParser/Parser.h>
 #include <llvm/IR/Verifier.h>
@@ -1265,27 +1265,36 @@ static void codegen_orc(LLVMModuleManager::Function& function, llvm::Module& mod
 	const LLVMModuleManager::ModuleDatabase& database)
 {
 	report(" Generating native code.");
-	auto contextPtr = LLVMState::context();
 	auto jit = LLVMState::orcjit();
-	auto TSM = llvm::orc::ThreadSafeModule(std::unique_ptr<llvm::Module>(&module), llvm::orc::ThreadSafeContext(std::unique_ptr<llvm::LLVMContext>(contextPtr)));
-	auto _module = TSM.getModuleUnlocked();
-	_module->dump();
-	auto &JD = jit->getMainJITDylib();
-	JD.addGenerator(
+	auto tsm = llvm::orc::ThreadSafeModule(std::unique_ptr<llvm::Module>(&module), *LLVMState::threadSafeContext());
+
+	auto &dylib = jit->getMainJITDylib();
+	dylib.addGenerator(
     cantFail(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
-        jit->getDataLayout().getGlobalPrefix())));
-	if (auto Err = jit->addIRModule(std::move(TSM))) {
-		llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "Failed to add module: ");
-		return;
-	}
-	// link_orc(module, kernel, device, externals, database);
+        jit->getDataLayout().getGlobalPrefix()))
+	);
+	
+	auto &ref = *tsm.getModuleUnlocked();
+
+	link_orc(ref, kernel, device, externals, database);
+
 	std::string name = "_Z_ocelotTranslated_" + kernel.name;
 	auto Sym = jit->lookup(name);
+	if (!Sym) {
+		// Add the module to the JIT if it hasn't been added yet.
+		// This will also run the optimizer and generate machine code for the module.
+		if (auto Err = jit->addIRModule(std::move(tsm))) {
+			llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "Failed to add module: ");
+			return;
+		}
+	}
+	Sym = jit->lookup(name);
 	if (!Sym) {
 		llvm::logAllUnhandledErrors(Sym.takeError(), llvm::errs(), "Failed to find function: ");
 		return;
 	}
 	function = hydrazine::bit_cast<LLVMModuleManager::Function>(Sym->getValue());
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
