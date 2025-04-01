@@ -19,6 +19,7 @@ namespace llvm
 	namespace orc{
 		class JITTargetMachineBuilder;
 		class LLJIT;
+		class ThreadSafeContext;
 	}
 }
 
@@ -43,8 +44,8 @@ public:
 	/*! \brief OrcJIT engine */
 	static llvm::orc::LLJIT* orcjit(); 
 
-	/*! \brief OrcJIT target machine */
-	static llvm::TargetMachine* targetMachine(); 
+	/*! \brief Thread Safe Context */
+	static llvm::orc::ThreadSafeContext* threadSafeContext();
 
 	LLVMState(LLVMState const&) = delete;
 	LLVMState& operator=(LLVMState const&) = delete;
@@ -70,8 +71,8 @@ private:
 	/*! \brief OrcJIT engine */
 	llvm::orc::LLJIT* _orcjit;
 
-	/*! \brief OrcJIT target machine */
-	llvm::TargetMachine* _targetMachine;
+	/*! \brief Thread Safe Context */
+	llvm::orc::ThreadSafeContext* _tsc;
 
 	LLVMModuleManager* _manager;
 };
