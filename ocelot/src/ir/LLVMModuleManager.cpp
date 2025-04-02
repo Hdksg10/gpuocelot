@@ -1268,12 +1268,6 @@ static void codegen_orc(LLVMModuleManager::Function& function, llvm::Module& mod
 	auto jit = LLVMState::orcjit();
 	auto tsm = llvm::orc::ThreadSafeModule(std::unique_ptr<llvm::Module>(&module), *LLVMState::threadSafeContext());
 
-	auto &dylib = jit->getMainJITDylib();
-	dylib.addGenerator(
-    cantFail(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
-        jit->getDataLayout().getGlobalPrefix()))
-	);
-	
 	auto &ref = *tsm.getModuleUnlocked();
 
 	link_orc(ref, kernel, device, externals, database);

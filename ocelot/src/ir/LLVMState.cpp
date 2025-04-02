@@ -113,15 +113,12 @@ LLVMState::LLVMState() : _jit(0), _context(0), _module(0), _tsc(0), _orcjit(0)
 		report(" Set RISC-V Target Machine");
 		auto jtmb = llvm::orc::JITTargetMachineBuilder(llvm::Triple(TargetTriple));
 		jtmb.setCPU(CPU);
-		jtmb.addFeatures({"+m", "+a", "+f", "+d", "+c"});
+		jtmb.addFeatures({"+m", "+a", "+f", "+d", "+c", "+zfh"});
 	#else
 		auto jtmb = llvm::cantFail(llvm::orc::JITTargetMachineBuilder::detectHost());
 	#endif
-	for (const auto &Feature : jtmb.getFeatures().getFeatures()) {
-        std::cout << Feature << " ";
-    }
 	auto orcjitExpected = llvm::orc::LLJITBuilder().setJITTargetMachineBuilder(jtmb).create();
-    assertM(orcjitExpected, "Creating the OrcJIT failed.");
+	assertM(orcjitExpected, "Creating the OrcJIT failed.");
 	_orcjit = orcjitExpected->release();
 	
 
