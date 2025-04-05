@@ -121,7 +121,12 @@ LLVMState::LLVMState() : _jit(0), _context(0), _module(0), _tsc(0), _orcjit(0)
 	assertM(orcjitExpected, "Creating the OrcJIT failed.");
 	_orcjit = orcjitExpected->release();
 	
-
+	auto &MainJD = _orcjit->getMainJITDylib();
+	MainJD.addGenerator(llvm::cantFail(
+		llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
+			_orcjit->getDataLayout().getGlobalPrefix())));
+	
+	
 	// assertM(_targetMachine != 0, "Creating target machine failed.");
 	assertM(_jit != 0, "Creating the JIT failed.");
 	report(" The JIT is alive.");

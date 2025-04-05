@@ -51,7 +51,7 @@
 #undef REPORT_BASE
 #endif
 
-#define REPORT_BASE 2
+#define REPORT_BASE 0
 
 #define REPORT_ALL_LLVM_ASSEMBLY 0
 

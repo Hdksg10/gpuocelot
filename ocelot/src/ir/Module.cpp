@@ -179,9 +179,8 @@ bool ir::Module::load(void* id, const std::string& path)
 	else {
 		return false;
 	}
-	
+	_id = id;
 	_loaded = true;
-
 	return true;
 }
 

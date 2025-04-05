@@ -106,6 +106,10 @@ namespace executive
 		const trace::TraceGeneratorVector& traceGenerators,
 		const ir::ExternalFunctionSet* externals)
 	{
+		if (externals == nullptr)
+		{
+			externals = new ir::ExternalFunctionSet();
+		}
 		ModuleMap::iterator module = _modules.find(id);
 		
 		if(module == _modules.end())

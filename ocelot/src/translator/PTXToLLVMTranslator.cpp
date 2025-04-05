@@ -83,7 +83,7 @@ ir::Kernel* PTXToLLVMTranslator::translate( const ir::Kernel* k )
 	
 	_dfg = static_cast< analysis::DataflowGraph* >( analysis );
 	
-	_dfg->convertToSSAType( analysis::DataflowGraph::Minimal );
+	_dfg->convertToSSAType( analysis::DataflowGraph::Default );
 	
 	_translateInstructions();
 	_initializeRegisters();
@@ -11266,7 +11266,6 @@ void PTXToLLVMTranslator::_addExternalFunctionDeclarations()
 void PTXToLLVMTranslator::_addStackAllocations()
 {
 	if( !_usesTextures ) return;
-	
 	ir::LLVMBr branch;
 	
 	if( _uninitialized.empty() )
