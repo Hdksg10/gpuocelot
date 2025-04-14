@@ -1376,8 +1376,11 @@ LLVMModuleManager::KernelAndTranslation::MetaData*
 	try
 	{
 		optimize(*_module, _optimizationLevel);
+		auto start = hydrazine::_ReportTimer.seconds();
 		codegen_orc(_metadata->function, *_module, *_kernel, _device,
 			_database->getExternalFunctionSet(), *_database);
+		auto end = hydrazine::_ReportTimer.seconds();
+		std::cout << "Codegen time: " << end - start << std::endl;
 	}
 	catch(...)
 	{
@@ -1590,13 +1593,15 @@ void LLVMModuleManager::ModuleDatabase::loadModule(const ir::Module* module,
 
 	int lowId = _modules.at(module->id()).lowId();
 	int highId = _modules.at(module->id()).highId();
-
+	auto start = hydrazine::_ReportTimer.seconds();
 	for (int id = lowId; id <= highId; id++) {
 		report("find kernel '" << _kernels[id].name() << "' at index " << id);
 		_kernels[id].prepareMetadata();
 	}
-
+	auto end = hydrazine::_ReportTimer.seconds();
+	std::cout << "prepareMetadata time: " << end - start << std::endl;
 	// translate and link modules
+	start = hydrazine::_ReportTimer.seconds();
 	auto destModule = std::make_unique<llvm::Module>("OcelotTranslatedPTXModule", llvm::getGlobalContext()).release();
 	for (int id = lowId; id <= highId; id++) {
 		report("translate kernel '" << _kernels[id].name() << "' at index " << id);
@@ -1608,6 +1613,8 @@ void LLVMModuleManager::ModuleDatabase::loadModule(const ir::Module* module,
 			break;
 		}
 	}
+	end = hydrazine::_ReportTimer.seconds();
+	std::cout << "translateMetadata time: " << end - start << std::endl;
 	for (int id = lowId; id <= highId; id++) {
 		_kernels[id].setModule(destModule);
 	}
